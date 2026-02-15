@@ -1,7 +1,8 @@
 
 import { test, expect } from '@playwright/test';
 
-test('login success', async ({ page }) => {
+test('AI generated login', async ({ page }) => {
+
   await page.goto('https://www.saucedemo.com/');
 
   await page.fill('#user-name', 'standard_user');
@@ -10,4 +11,5 @@ test('login success', async ({ page }) => {
   await page.click('#login-button');
 
   await expect(page).toHaveURL(/inventory/);
+
 });

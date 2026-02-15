@@ -6,6 +6,7 @@ import { applyMemoryFix } from "./memoryAgent.js";
 import { generateDashboard } from "./dashboard.js";
 import { detectNewFeature } from "./featureDetector.js";
 import { createTestForFeature } from "./autoTestCreator.js";
+import { createIntelligentTest } from "./intelligentTestCreator.js";
 
 async function runTests() {
   try {
@@ -17,6 +18,9 @@ async function runTests() {
 }
 
 async function main() {
+  // STEP 0 — Browser Intelligence
+  console.log("🧠 Scanning UI...");
+  await createIntelligentTest();
 
   console.log("🚀 Autonomous QA Agent Starting...");
 
