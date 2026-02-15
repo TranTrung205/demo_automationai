@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { generateTest } from "./testGenerator.js";
 import { fixTest } from "./selfHealingAgent.js";
 import { aiFixTest } from "./aiFixer.js";
-import { autoCommit } from "./gitHelper.js";
+import { applyMemoryFix } from "./memoryAgent.js";
 import { generateDashboard } from "./dashboard.js";
 
 async function runTests() {
@@ -21,16 +21,45 @@ async function main() {
   let result = await runTests();
 
   if (result !== true) {
+
+    // 🧠 STEP 1 — MEMORY
+    console.log("🧠 Checking memory...");
+    const memoryFixed = applyMemoryFix();
+
+    if (memoryFixed) {
+      console.log("🔁 Re-running after memory fix...");
+      const retryMemory = await runTests();
+
+      if (retryMemory === true) {
+        generateDashboard("PASS", "Recovered using memory");
+        return;
+      }
+    }
+
+    // 🤖 STEP 2 — SMART HEAL
     console.log("❌ Failed → Self healing...");
     await fixTest(result);
 
     console.log("🔁 Re-running tests...");
-    const retry = await runTests();
+    let retry = await runTests();
 
     if (retry !== true) {
-      generateDashboard("FAIL", retry);
+
+      // 🧠 STEP 3 — AI HEAL
+      console.log("🧠 AI Healing...");
+      await aiFixTest(retry);
+
+      console.log("🔁 Re-running after AI...");
+      retry = await runTests();
+
+      if (retry !== true) {
+        generateDashboard("FAIL", retry);
+      } else {
+        generateDashboard("PASS", "Recovered using AI");
+      }
+
     } else {
-      generateDashboard("PASS", "Recovered after healing");
+      generateDashboard("PASS", "Recovered after smart healing");
     }
 
   } else {
@@ -38,6 +67,5 @@ async function main() {
     generateDashboard("PASS", "All tests passed");
   }
 }
-
 
 main();

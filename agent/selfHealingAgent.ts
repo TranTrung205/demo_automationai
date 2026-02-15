@@ -1,7 +1,9 @@
 import fs from "fs";
+import { learnSelector } from "./memoryAgent.js";
 
-function extractBrokenSelector(errorLog: string): string | null {
-  const match = errorLog.match(/['"`](#[^'"`]+)['"`]/);
+function findLocator(errorLog: string): string | null {
+  const regex = /waiting for locator\(['"](.+?)['"]\)/i;
+  const match = errorLog.match(regex);
 
   if (match && match[1]) {
     return match[1];
@@ -10,41 +12,44 @@ function extractBrokenSelector(errorLog: string): string | null {
   return null;
 }
 
-function findBetterSelector(code: string): string | null {
-  // simple heuristic examples
-  if (code.includes("user-name")) return "#user-name";
-  if (code.includes("login-button")) return "#login-button";
-
-  return null;
-}
-
 export async function fixTest(errorLog: string) {
-  console.log("🤖 Smart healing started...");
+  const locator = findLocator(errorLog);
 
-  const filePath = "tests/login.spec.ts";
-  let code = fs.readFileSync(filePath, "utf8");
-
-  const brokenSelector = extractBrokenSelector(errorLog);
-
-  if (!brokenSelector) {
-    console.log("⚠️ Could not detect broken selector");
+  if (!locator) {
+    console.log("⚠️ No locator found in error log");
     return;
   }
 
-  console.log("❌ Broken selector detected:", brokenSelector);
+  console.log("🔍 Broken locator detected:", locator);
 
-  const betterSelector = findBetterSelector(code);
+  let code = fs.readFileSync("tests/login.spec.ts", "utf8");
 
-  if (!betterSelector) {
-    console.log("⚠️ No better selector found");
-    return;
+  // 🔥 SMART HEALING RULES
+  let newLocator = locator;
+
+  if (locator.includes("wrong-id")) {
+    newLocator = "#user-name";
   }
 
-  console.log("✅ Replacing with:", betterSelector);
+  if (locator.includes("submit-login")) {
+    newLocator = "#login-button";
+  }
 
-  code = code.replaceAll(brokenSelector, betterSelector);
+  if (locator.includes("password-input")) {
+    newLocator = "#password";
+  }
 
-  fs.writeFileSync(filePath, code);
+  if (newLocator !== locator) {
+    code = code.replace(locator, newLocator);
 
-  console.log("🎉 Test healed successfully");
+    fs.writeFileSync("tests/login.spec.ts", code);
+
+    console.log(`🤖 Fixed selector: ${locator} → ${newLocator}`);
+
+    // 🧠 SAVE MEMORY
+    learnSelector(locator, newLocator);
+
+  } else {
+    console.log("⚠️ No smart rule matched");
+  }
 }
