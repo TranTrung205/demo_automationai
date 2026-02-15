@@ -1,38 +1,32 @@
 import fs from "fs";
+import path from "path";
 
-const SNAPSHOT_PATH = "agent/ui-snapshot.json";
+const FEATURES_FILE = "agent/features.json";
 
-function getCurrentSnapshot() {
-  // giả lập scan UI
-  return {
-    buttons: ["login-button", "logout-button", "checkout-button"]
-  };
-}
+export function detectNewFeature(): string | null {
 
-function loadOldSnapshot(): any {
-  if (!fs.existsSync(SNAPSHOT_PATH)) return null;
+  const testDir = "tests";
 
-  return JSON.parse(fs.readFileSync(SNAPSHOT_PATH, "utf8"));
-}
-
-function saveSnapshot(snapshot: any) {
-  fs.writeFileSync(SNAPSHOT_PATH, JSON.stringify(snapshot, null, 2));
-}
-
-export function detectNewFeature(): string[] {
-  const current = getCurrentSnapshot();
-  const old = loadOldSnapshot();
-
-  if (!old) {
-    saveSnapshot(current);
-    return [];
+  if (!fs.existsSync(FEATURES_FILE)) {
+    fs.writeFileSync(FEATURES_FILE, JSON.stringify([]));
   }
 
-  const newButtons = current.buttons.filter(
-    (b: string) => !old.buttons.includes(b)
+  const knownFeatures: string[] = JSON.parse(
+    fs.readFileSync(FEATURES_FILE, "utf-8")
   );
 
-  saveSnapshot(current);
+  const files = fs.readdirSync(testDir);
 
-  return newButtons;
+  for (const file of files) {
+    if (!knownFeatures.includes(file)) {
+
+      knownFeatures.push(file);
+      fs.writeFileSync(FEATURES_FILE, JSON.stringify(knownFeatures, null, 2));
+
+      console.log("🆕 New feature detected:", file);
+      return file;
+    }
+  }
+
+  return null;
 }

@@ -1,28 +1,12 @@
 import { execSync } from "child_process";
-
-// STEP 1 — Generate base test
 import { generateTest } from "./testGenerator.js";
-
-// STEP 3 — Smart self healing
 import { fixTest } from "./selfHealingAgent.js";
-
-// STEP 4 — AI healing
 import { aiFixTest } from "./aiFixer.js";
-
-// STEP 7 — Memory agent
 import { applyMemoryFix } from "./memoryAgent.js";
-
-// STEP 6 — Dashboard report
 import { generateDashboard } from "./dashboard.js";
-
-// STEP 8 — Autonomous feature detection
 import { detectNewFeature } from "./featureDetector.js";
 import { createTestForFeature } from "./autoTestCreator.js";
 
-
-// ===============================
-// Run Playwright tests
-// ===============================
 async function runTests() {
   try {
     execSync("npx playwright test", { stdio: "inherit" });
@@ -32,61 +16,36 @@ async function runTests() {
   }
 }
 
-
-// ===============================
-// MAIN AGENT FLOW
-// ===============================
 async function main() {
 
-  console.log("🤖 AI TEST AGENT STARTING...\n");
+  console.log("🚀 Autonomous QA Agent Starting...");
 
+  // =========================
+  // STEP 1 — Detect new feature
+  // =========================
+  const newFeature = detectNewFeature();
 
-  // =========================================================
-  // STEP 8 — Detect new feature and auto create tests
-  // =========================================================
-  console.log("🔍 Checking for new features...");
-
-  const newFeatures = detectNewFeature();
-
-  if (newFeatures.length > 0) {
-    console.log("🆕 New features detected:", newFeatures);
-
-    for (const feature of newFeatures) {
-      createTestForFeature(feature);
-    }
-  } else {
-    console.log("✅ No new features");
+  if (newFeature) {
+    await createTestForFeature(newFeature);
   }
 
-
-  // =========================================================
-  // STEP 1 — Generate main test
-  // =========================================================
-  console.log("\n📝 Generating test...");
+  // =========================
+  // STEP 2 — Generate base test
+  // =========================
   await generateTest();
 
-
-  // =========================================================
-  // STEP 2 — Run tests
-  // =========================================================
-  console.log("\n🚀 Running tests...");
+  console.log("🚀 Running tests...");
   let result = await runTests();
 
-
-  // =========================================================
-  // IF TEST FAIL → HEALING PIPELINE
-  // =========================================================
   if (result !== true) {
 
-    // =====================================================
-    // STEP 7 — MEMORY HEALING (FIRST PRIORITY)
-    // =====================================================
-    console.log("\n🧠 Checking memory...");
+    // =========================
+    // STEP 3 — Memory Fix
+    // =========================
+    console.log("🧠 Checking memory...");
     const memoryFixed = applyMemoryFix();
 
     if (memoryFixed) {
-
-      console.log("🔁 Re-running after memory fix...");
       const retryMemory = await runTests();
 
       if (retryMemory === true) {
@@ -95,58 +54,37 @@ async function main() {
       }
     }
 
-
-    // =====================================================
-    // STEP 3 — SMART HEALING
-    // =====================================================
-    console.log("\n🤖 Smart healing...");
+    // =========================
+    // STEP 4 — Smart Healing
+    // =========================
+    console.log("🤖 Smart healing...");
     await fixTest(result);
 
-    console.log("🔁 Re-running tests...");
     let retry = await runTests();
 
-
-    // =====================================================
-    // STEP 4 — AI HEALING (LAST RESORT)
-    // =====================================================
     if (retry !== true) {
 
-      console.log("\n🧠 AI Healing...");
+      // =========================
+      // STEP 5 — AI Healing
+      // =========================
+      console.log("🧠 AI Healing...");
       await aiFixTest(retry);
 
-      console.log("🔁 Re-running after AI...");
       retry = await runTests();
 
       if (retry !== true) {
-
-        console.log("❌ Still failing after AI");
         generateDashboard("FAIL", retry);
-
       } else {
-
-        console.log("✅ Recovered using AI");
         generateDashboard("PASS", "Recovered using AI");
-
       }
 
     } else {
-
-      console.log("✅ Recovered using smart healing");
       generateDashboard("PASS", "Recovered after smart healing");
-
     }
 
   } else {
-
-    // =====================================================
-    // TEST PASS FIRST TRY
-    // =====================================================
-    console.log("\n✅ Tests passed");
     generateDashboard("PASS", "All tests passed");
-
   }
-
-  console.log("\n🏁 Agent finished");
 }
 
 main();
