@@ -1,21 +1,27 @@
+import { Page, expect } from '@playwright/test';
 import { BasePage } from './basePage';
-import { Page, Locator } from '@playwright/test';
 
 export class LoginPage extends BasePage {
-  username: Locator;
-  password: Locator;
-  loginBtn: Locator;
+    constructor(page: Page) {
+        super(page);
+    }
 
-  constructor(page: Page) {
-    super(page);
-    this.username = page.locator('#user-name');
-    this.password = page.locator('#password');
-    this.loginBtn = page.locator('#login-button');
-  }
+    username = this.page.locator('#user-name');
+    password = this.page.locator('#password');
+    loginBtn = this.page.locator('#login-button');
+    errorMsg = this.page.locator('[data-test="error"]');
 
-  async login(user: string, pass: string) {
-    await this.username.fill(user);
-    await this.password.fill(pass);
-    await this.loginBtn.click();
-  }
+    async goto() {
+        await this.open('/');
+    }
+
+    async login(user: string, pass: string) {
+        await this.fill(this.username, user);
+        await this.fill(this.password, pass);
+        await this.click(this.loginBtn);
+    }
+
+    async verifyLoginError() {
+        await expect(this.errorMsg).toBeVisible();
+    }
 }

@@ -1,15 +1,33 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
+import { BasePage } from './basePage';
 
-export class InventoryPage {
-  page: Page;
-  title: Locator;
-
+export class InventoryPage extends BasePage {
   constructor(page: Page) {
-    this.page = page;
-    this.title = page.locator('.title');
+    super(page);
   }
 
-  async verifyLoaded() {
+  title = this.page.locator('.title');
+  cartIcon = this.page.locator('.shopping_cart_link');
+  productItem = this.page.locator('.inventory_item');
+  sortDropdown = this.page.locator('[data-test="product_sort_container"]');
+
+  async verifyPageLoaded() {
     await expect(this.title).toHaveText('Products');
+  }
+
+  async addFirstItemToCart() {
+    await this.page.locator('.inventory_item button').first().click();
+  }
+
+  async openCart() {
+    await this.click(this.cartIcon);
+  }
+
+  async sortBy(option: string) {
+    await this.sortDropdown.selectOption(option);
+  }
+
+  async openFirstProductDetail() {
+    await this.page.locator('.inventory_item_name').first().click();
   }
 }
