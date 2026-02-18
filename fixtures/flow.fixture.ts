@@ -1,34 +1,35 @@
 /**
- * LoginFlow
+ * Flow Fixture
  *
- * Business flow liên quan authentication:
- *  - login success
- *  - logout
+ * Fixture này inject Business Flow vào test:
+ *  - LoginFlow
+ *  - PurchaseFlow
  *
- * Flow này wrap Page Object để test và AI dùng dễ hơn
+ * Test chỉ cần gọi:
+ *   test('...', async ({ flows }) => {})
  */
 
-import { Page } from '@playwright/test';
-import { LoginPage } from '../../pages/loginPage';
-import { InventoryPage } from '../../pages/inventoryPage';
+import { test as base } from '@playwright/test';
+import { PurchaseFlow } from '../../src/flows/ui/purchase.flow';
+import { LoginFlow } from '../../src/flows/ui/login.flow';
 
-export class LoginFlow {
-  private page: Page;
-  private loginPage: LoginPage;
-  private inventoryPage: InventoryPage;
+type FlowFixture = {
+  flows: {
+    login: LoginFlow;
+    purchase: PurchaseFlow;
+  };
+};
 
-  constructor(page: Page) {
-    this.page = page;
-    this.loginPage = new LoginPage(page);
-    this.inventoryPage = new InventoryPage(page);
-  }
+export const test = base.extend<FlowFixture>({
+  flows: async ({ page }, use) => {
 
-  async login(username: string, password: string) {
-    await this.loginPage.navigate('/');
-    await this.loginPage.login(username, password);
-  }
+    const flows = {
+      login: new LoginFlow(page),
+      purchase: new PurchaseFlow(page),
+    };
 
-  async loginAsStandardUser() {
-    await this.login('standard_user', 'secret_sauce');
-  }
-}
+    await use(flows);
+  },
+});
+
+export { expect } from '@playwright/test';

@@ -4,14 +4,15 @@
  * File này xử lý các API liên quan đến sản phẩm.
  */
 
-import { BaseAPI } from './baseAPI';
+import { BaseAPI } from './baseAPI.api';
 
 export class ProductAPI extends BaseAPI {
 
   // Lấy tất cả sản phẩm
   async getAllProducts() {
-    return this.get('/products');
-  }
+  const res = await this.get('/products');
+  return res.json();
+}
 
   // Lấy sản phẩm theo id
   async getProductById(id: number) {

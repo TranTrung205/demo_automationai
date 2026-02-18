@@ -4,7 +4,7 @@
  * File này xử lý các API liên quan đến authentication.
  */
 
-import { BaseAPI } from './baseAPI';
+import { BaseAPI } from './baseAPI.api';
 
 export class AuthAPI extends BaseAPI {
 
