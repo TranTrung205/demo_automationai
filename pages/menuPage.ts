@@ -1,26 +1,31 @@
 /**
- * ProductDetailPage
+ * MenuPage
  *
- * Page đại diện cho màn hình chi tiết sản phẩm
+ * Page đại diện sidebar menu (hamburger menu)
  *
  * Business:
- *  - Add to cart
- *  - Back to inventory
+ *  - Logout
+ *  - Reset app state
+ *  - About
  */
 
 import { BasePage } from './basePage';
 import { Page } from '@playwright/test';
 
-export class ProductDetailPage extends BasePage {
+export class MenuPage extends BasePage {
   constructor(page: Page) {
     super(page);
   }
 
-  async addToCart() {
-    await this.page.click('button:has-text("Add to cart")');
+  async logout() {
+    await this.page.click('#logout_sidebar_link');
   }
 
-  async back() {
-    await this.page.click('#back-to-products');
+  async resetApp() {
+    await this.page.click('#reset_sidebar_link');
+  }
+
+  async openAbout() {
+    await this.page.click('#about_sidebar_link');
   }
 }
