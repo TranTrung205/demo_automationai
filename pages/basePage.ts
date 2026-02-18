@@ -1,13 +1,17 @@
-import { Page, expect } from '@playwright/test';
-
 /**
  * BasePage
- * Class cha dùng chung cho tất cả page
- * Chứa các hàm common như:
- * - open url
- * - wait element
- * - verify text
+ *
+ * Page cha của tất cả các Page khác
+ *
+ * Chứa các function dùng chung:
+ *  - navigate
+ *  - get title
+ *
+ * Giúp tránh duplicate code giữa các page
  */
+
+import { Page } from '@playwright/test';
+
 export class BasePage {
   protected page: Page;
 
@@ -15,19 +19,11 @@ export class BasePage {
     this.page = page;
   }
 
-  async open(url: string) {
-    await this.page.goto(url);
+  async navigate(path: string) {
+    await this.page.goto(path);
   }
 
-  async waitForVisible(locator: any) {
-    await expect(locator).toBeVisible();
-  }
-
-  async click(locator: any) {
-    await locator.click();
-  }
-
-  async fill(locator: any, text: string) {
-    await locator.fill(text);
+  async getTitle() {
+    return this.page.title();
   }
 }

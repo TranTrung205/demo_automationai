@@ -1,32 +1,28 @@
-import { Page, expect } from '@playwright/test';
+/**
+ * CheckoutPage
+ *
+ * Page đại diện cho quy trình checkout
+ *
+ * Sử dụng:
+ *  - CheckoutFormComponent
+ */
+
 import { BasePage } from './basePage';
+import { Page } from '@playwright/test';
+import { CheckoutFormComponent } from '../components/checkoutForm.component';
 
 export class CheckoutPage extends BasePage {
+  form: CheckoutFormComponent;
+
   constructor(page: Page) {
     super(page);
+    this.form = new CheckoutFormComponent(page);
   }
 
-  firstName = this.page.locator('#first-name');
-  lastName = this.page.locator('#last-name');
-  postalCode = this.page.locator('#postal-code');
+  async completeOrder(first: string, last: string, zip: string) {
+    await this.form.fillInformation(first, last, zip);
+    await this.form.continue();
 
-  continueBtn = this.page.locator('#continue');
-  finishBtn = this.page.locator('#finish');
-
-  successMsg = this.page.locator('.complete-header');
-
-  async fillInformation(fn: string, ln: string, zip: string) {
-    await this.fill(this.firstName, fn);
-    await this.fill(this.lastName, ln);
-    await this.fill(this.postalCode, zip);
-    await this.click(this.continueBtn);
-  }
-
-  async finishOrder() {
-    await this.click(this.finishBtn);
-  }
-
-  async verifySuccess() {
-    await expect(this.successMsg).toHaveText('Thank you for your order!');
+    await this.page.click('#finish');
   }
 }

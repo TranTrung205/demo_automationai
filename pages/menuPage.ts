@@ -1,19 +1,26 @@
-import { Page } from '@playwright/test';
-import { BasePage } from './basePage';
+/**
+ * ProductDetailPage
+ *
+ * Page đại diện cho màn hình chi tiết sản phẩm
+ *
+ * Business:
+ *  - Add to cart
+ *  - Back to inventory
+ */
 
-export class MenuPage extends BasePage {
+import { BasePage } from './basePage';
+import { Page } from '@playwright/test';
+
+export class ProductDetailPage extends BasePage {
   constructor(page: Page) {
     super(page);
   }
 
-  menuBtn = this.page.locator('#react-burger-menu-btn');
-  logoutLink = this.page.locator('#logout_sidebar_link');
-
-  async openMenu() {
-    await this.click(this.menuBtn);
+  async addToCart() {
+    await this.page.click('button:has-text("Add to cart")');
   }
 
-  async logout() {
-    await this.click(this.logoutLink);
+  async back() {
+    await this.page.click('#back-to-products');
   }
 }

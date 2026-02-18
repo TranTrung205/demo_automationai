@@ -1,38 +1,31 @@
-import { Locator, expect } from '@playwright/test';
-
 /**
  * CartItemComponent
  *
- * Đại diện 1 item trong giỏ hàng
+ * Component đại diện cho từng item trong Cart
+ *
+ * Có thể:
+ *  - Remove product
+ *  - Verify product tồn tại trong cart
  */
+
+import { Page } from '@playwright/test';
+
 export class CartItemComponent {
-    readonly root: Locator;
+  readonly page: Page;
 
-    readonly name: Locator;
-    readonly price: Locator;
-    readonly removeBtn: Locator;
+  constructor(page: Page) {
+    this.page = page;
+  }
 
-    constructor(root: Locator) {
-        this.root = root;
+  item(name: string) {
+    return this.page.locator('.cart_item').filter({
+      hasText: name
+    });
+  }
 
-        this.name = root.locator('.inventory_item_name');
-        this.price = root.locator('.inventory_item_price');
-        this.removeBtn = root.locator('button');
-    }
-
-    async getName(): Promise<string | null> {
-        return await this.name.textContent();
-    }
-
-    async getPrice(): Promise<string | null> {
-        return await this.price.textContent();
-    }
-
-    async remove() {
-        await this.removeBtn.click();
-    }
-
-    async expectVisible() {
-        await expect(this.root).toBeVisible();
-    }
+  async remove(name: string) {
+    await this.item(name)
+      .getByRole('button', { name: /remove/i })
+      .click();
+  }
 }

@@ -1,19 +1,26 @@
-import { Page, expect } from '@playwright/test';
+/**
+ * ProductDetailPage
+ *
+ * Page đại diện cho màn hình chi tiết sản phẩm
+ *
+ * Business:
+ *  - Add to cart
+ *  - Back to inventory
+ */
+
 import { BasePage } from './basePage';
+import { Page } from '@playwright/test';
 
 export class ProductDetailPage extends BasePage {
   constructor(page: Page) {
     super(page);
   }
 
-  productName = this.page.locator('.inventory_details_name');
-  addToCartBtn = this.page.locator('button[data-test^="add-to-cart"]');
-
-  async verifyLoaded() {
-    await expect(this.productName).toBeVisible();
+  async addToCart() {
+    await this.page.click('button:has-text("Add to cart")');
   }
 
-  async addToCart() {
-    await this.click(this.addToCartBtn);
+  async back() {
+    await this.page.click('#back-to-products');
   }
 }

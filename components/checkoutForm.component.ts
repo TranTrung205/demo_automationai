@@ -1,34 +1,30 @@
-import { Page, Locator } from '@playwright/test';
-
 /**
  * CheckoutFormComponent
  *
- * Đại diện form nhập thông tin checkout
+ * Component đại diện cho form nhập thông tin checkout:
+ *  - First name
+ *  - Last name
+ *  - Zip code
+ *
+ * Tách component giúp tái sử dụng và code sạch hơn
  */
+
+import { Page } from '@playwright/test';
+
 export class CheckoutFormComponent {
-    readonly page: Page;
+  readonly page: Page;
 
-    readonly firstNameInput: Locator;
-    readonly lastNameInput: Locator;
-    readonly zipCodeInput: Locator;
-    readonly continueBtn: Locator;
+  constructor(page: Page) {
+    this.page = page;
+  }
 
-    constructor(page: Page) {
-        this.page = page;
+  async fillInformation(first: string, last: string, zip: string) {
+    await this.page.fill('#first-name', first);
+    await this.page.fill('#last-name', last);
+    await this.page.fill('#postal-code', zip);
+  }
 
-        this.firstNameInput = page.locator('#first-name');
-        this.lastNameInput = page.locator('#last-name');
-        this.zipCodeInput = page.locator('#postal-code');
-        this.continueBtn = page.locator('#continue');
-    }
-
-    async fillForm(first: string, last: string, zip: string) {
-        await this.firstNameInput.fill(first);
-        await this.lastNameInput.fill(last);
-        await this.zipCodeInput.fill(zip);
-    }
-
-    async continue() {
-        await this.continueBtn.click();
-    }
+  async continue() {
+    await this.page.click('#continue');
+  }
 }

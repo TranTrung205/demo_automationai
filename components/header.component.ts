@@ -1,43 +1,41 @@
-import { Page, Locator, expect } from '@playwright/test';
-
 /**
  * HeaderComponent
  *
- * Đại diện thanh header trên website
- * Dùng lại cho nhiều page: inventory, cart, checkout
+ * Component này đại diện cho phần HEADER chung của hệ thống
+ * Bao gồm:
+ *  - Icon giỏ hàng
+ *  - Menu button
+ *
+ * Component dùng để tái sử dụng ở nhiều Page:
+ *  Inventory
+ *  Cart
+ *  Checkout
+ *
+ * 👉 Đây là Component Object Pattern (Modern Playwright)
  */
+
+import { Page, Locator } from '@playwright/test';
+
 export class HeaderComponent {
     readonly page: Page;
-
-    readonly menuButton: Locator;
     readonly cartIcon: Locator;
-    readonly cartBadge: Locator;
+    readonly menuButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
 
-        this.menuButton = page.locator('#react-burger-menu-btn');
+        // locator icon giỏ hàng
         this.cartIcon = page.locator('.shopping_cart_link');
-        this.cartBadge = page.locator('.shopping_cart_badge');
-    }
 
-    async openMenu() {
-        await this.menuButton.click();
+        // locator menu button
+        this.menuButton = page.locator('#react-burger-menu-btn');
     }
 
     async openCart() {
         await this.cartIcon.click();
     }
 
-    async getCartCount(): Promise<number> {
-        if (await this.cartBadge.isVisible()) {
-            const text = await this.cartBadge.textContent();
-            return Number(text);
-        }
-        return 0;
-    }
-
-    async expectCartCount(count: number) {
-        await expect(this.cartBadge).toHaveText(String(count));
+    async openMenu() {
+        await this.menuButton.click();
     }
 }

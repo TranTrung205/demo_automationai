@@ -1,27 +1,23 @@
-import { Page, expect } from '@playwright/test';
+/**
+ * LoginPage
+ *
+ * Page đại diện cho màn hình login
+ *
+ * Business chính:
+ *  - Login user
+ */
+
 import { BasePage } from './basePage';
+import { Page } from '@playwright/test';
 
 export class LoginPage extends BasePage {
-    constructor(page: Page) {
-        super(page);
-    }
+  constructor(page: Page) {
+    super(page);
+  }
 
-    username = this.page.locator('#user-name');
-    password = this.page.locator('#password');
-    loginBtn = this.page.locator('#login-button');
-    errorMsg = this.page.locator('[data-test="error"]');
-
-    async goto() {
-        await this.open('/');
-    }
-
-    async login(user: string, pass: string) {
-        await this.fill(this.username, user);
-        await this.fill(this.password, pass);
-        await this.click(this.loginBtn);
-    }
-
-    async verifyLoginError() {
-        await expect(this.errorMsg).toBeVisible();
-    }
+  async login(username: string, password: string) {
+    await this.page.fill('#user-name', username);
+    await this.page.fill('#password', password);
+    await this.page.click('#login-button');
+  }
 }

@@ -1,33 +1,34 @@
-import { Page, expect } from '@playwright/test';
+/**
+ * InventoryPage
+ *
+ * Page đại diện cho danh sách sản phẩm sau khi login
+ *
+ * Sử dụng:
+ *  - HeaderComponent
+ *  - InventoryItemComponent
+ */
+
 import { BasePage } from './basePage';
+import { Page } from '@playwright/test';
+import { HeaderComponent } from '../components/header.component';
+import { InventoryItemComponent } from '../components/inventoryItem.component';
 
 export class InventoryPage extends BasePage {
+  header: HeaderComponent;
+  items: InventoryItemComponent;
+
   constructor(page: Page) {
     super(page);
+
+    this.header = new HeaderComponent(page);
+    this.items = new InventoryItemComponent(page);
   }
 
-  title = this.page.locator('.title');
-  cartIcon = this.page.locator('.shopping_cart_link');
-  productItem = this.page.locator('.inventory_item');
-  sortDropdown = this.page.locator('[data-test="product_sort_container"]');
-
-  async verifyPageLoaded() {
-    await expect(this.title).toHaveText('Products');
+  async addProduct(name: string) {
+    await this.items.addToCart(name);
   }
 
-  async addFirstItemToCart() {
-    await this.page.locator('.inventory_item button').first().click();
-  }
-
-  async openCart() {
-    await this.click(this.cartIcon);
-  }
-
-  async sortBy(option: string) {
-    await this.sortDropdown.selectOption(option);
-  }
-
-  async openFirstProductDetail() {
-    await this.page.locator('.inventory_item_name').first().click();
+  async goToCart() {
+    await this.header.openCart();
   }
 }
