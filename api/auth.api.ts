@@ -1,20 +1,23 @@
 /**
+ * ==================================
  * AUTH API
- *
- * File này xử lý các API liên quan đến authentication.
+ * ==================================
  */
 
 import { BaseAPI } from './baseAPI.api';
 
 export class AuthAPI extends BaseAPI {
 
-  /**
-   * Login user
-   */
-  async login(username: string, password: string) {
+  async login(
+    username: string,
+    password: string
+  ) {
+
     return this.post('/auth/login', {
       username,
-      password,
+      password
     });
+
   }
+
 }

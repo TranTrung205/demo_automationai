@@ -1,42 +1,30 @@
-/**
- * Hybrid Login Flow
- * -----------------
- * Combines API authentication with UI session.
- *
- * Strategy:
- * 1. Login via API
- * 2. Inject token into browser storage
- * 3. Navigate directly to secured page
- *
- * Benefits:
- * - Faster execution
- * - Stable CI
- * - Enterprise best practice
- */
-
-import { Page } from '@playwright/test';
+import { Page, APIRequestContext } from '@playwright/test';
 import { AuthAPIFlow } from '../api/auth.api.flow';
 
 export class LoginHybridFlow {
 
-  /**
-   * Login using API and continue in UI
-   */
-  static async login(
-    page: Page,
-    username: string,
-    password: string
+  private authAPI: AuthAPIFlow;
+
+  constructor(
+    private page: Page,
+    private request: APIRequestContext
   ) {
+    this.authAPI = new AuthAPIFlow(request);
+  }
 
-    const token = await AuthAPIFlow.login(username, password);
+  /**
+   * Login using API then continue with UI
+   */
+  async login(username: string, password: string) {
 
-    await page.addInitScript(value => {
+    // ✅ correct call
+    const token = await this.authAPI.login(username, password);
 
+    await this.page.addInitScript(value => {
       window.localStorage.setItem('token', value);
-
     }, token);
 
-    await page.goto('/inventory');
+    await this.page.goto('https://www.saucedemo.com/inventory.html');
 
   }
 

@@ -1,36 +1,75 @@
 /**
- * BASE API
+ * ==================================
+ * BaseAPI
+ * ==================================
+ * Base class cho tất cả API services
  *
- * File này là lớp base cho tất cả API class.
- * Chứa các method dùng chung như GET, POST, PUT, DELETE.
+ * Handles:
+ *  - Base URL
+ *  - Headers
+ *  - Token Authorization
  */
 
 import { APIRequestContext } from '@playwright/test';
 
 export class BaseAPI {
-  protected request: APIRequestContext;
 
-  constructor(request: APIRequestContext) {
-    this.request = request;
+  constructor(protected request: APIRequestContext) {}
+
+  protected async get(
+    url: string,
+    token?: string
+  ) {
+
+    return this.request.get(url, {
+      headers: token
+        ? { Authorization: `Bearer ${token}` }
+        : {}
+    });
+
   }
 
-  // GET request
-  async get(url: string) {
-    return this.request.get(url);
+  protected async post(
+    url: string,
+    body: any,
+    token?: string
+  ) {
+
+    return this.request.post(url, {
+      data: body,
+      headers: token
+        ? { Authorization: `Bearer ${token}` }
+        : {}
+    });
+
   }
 
-  // POST request
-  async post(url: string, data: any) {
-    return this.request.post(url, { data });
+  protected async put(
+    url: string,
+    body: any,
+    token?: string
+  ) {
+
+    return this.request.put(url, {
+      data: body,
+      headers: token
+        ? { Authorization: `Bearer ${token}` }
+        : {}
+    });
+
   }
 
-  // PUT request
-  async put(url: string, data: any) {
-    return this.request.put(url, { data });
+  protected async delete(
+    url: string,
+    token?: string
+  ) {
+
+    return this.request.delete(url, {
+      headers: token
+        ? { Authorization: `Bearer ${token}` }
+        : {}
+    });
+
   }
 
-  // DELETE request
-  async delete(url: string) {
-    return this.request.delete(url);
-  }
 }

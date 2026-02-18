@@ -4,7 +4,7 @@
  * File này xử lý các API liên quan đến user.
  */
 
-import { BaseAPI } from './baseAPI';
+import { BaseAPI } from './baseAPI.api';
 
 export class UserAPI extends BaseAPI {
 

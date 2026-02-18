@@ -1,29 +1,30 @@
-/**
- * Purchase UI Flow
- * ----------------
- * Handles checkout process via UI.
- */
-
 import { Page } from '@playwright/test';
-import { CheckoutPage } from '../../pages/checkout.page';
+import { InventoryPage } from '../../pages/inventorypage';
+import { CartPage } from '../../pages/cartpage';
+import { CheckoutPage } from '../../pages/checkoutPage';
 
 export class PurchaseUIFlow {
 
-  /**
-   * Complete checkout via UI
-   */
-  static async checkout(
+  static async completePurchase(
     page: Page,
-    firstName: string,
-    lastName: string,
-    postalCode: string
+    productName: string,
+    first: string,
+    last: string,
+    zip: string
   ) {
 
+    const inventory = new InventoryPage(page);
+    const cart = new CartPage(page);
     const checkout = new CheckoutPage(page);
 
-    await checkout.fillInformation(firstName, lastName, postalCode);
+    await inventory.addItemToCart(productName);
 
-    await checkout.finish();
+    await cart.goto();
+
+    await cart.checkout();
+
+    // Page đã handle full logic
+    await checkout.completeOrder(first, last, zip);
 
   }
 

@@ -1,20 +1,42 @@
 /**
+ * ==================================
  * Purchase API Flow
- * -----------------
- * Handles checkout via API.
+ * ==================================
+ * Business flow for checkout operations.
  */
 
-import { PurchaseAPI } from '../../api/purchase.api';
+import { APIRequestContext } from '@playwright/test';
+import { PurchaseAPI, CheckoutPayload } from '../../api/purchase.api';
 
 export class PurchaseAPIFlow {
 
+  private purchaseAPI: PurchaseAPI;
+
+  constructor(private request: APIRequestContext) {
+    this.purchaseAPI = new PurchaseAPI(request);
+  }
+
   /**
+   * ==================================
    * Complete purchase via API
+   * ==================================
    */
-  static async checkout(token: string, payload: any) {
+  async checkout(productId: number) {
 
-    return await PurchaseAPI.checkout(token, payload);
+    const payload: CheckoutPayload = {
+      userId: 1,
+      date: new Date().toISOString(),
+      products: [
+        {
+          productId,
+          quantity: 1
+        }
+      ]
+    };
 
+    const response = await this.purchaseAPI.checkout(payload);
+
+    return await response.json();
   }
 
 }

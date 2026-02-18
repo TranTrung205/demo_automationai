@@ -31,4 +31,14 @@ export class InventoryPage extends BasePage {
   async goToCart() {
     await this.header.openCart();
   }
+
+  async addItemToCart(productName: string) {
+
+    const productCard = this.page
+      .locator('.inventory_item')
+      .filter({ hasText: productName });
+
+    await productCard.getByRole('button', { name: /add to cart/i }).click();
+
+  }
 }

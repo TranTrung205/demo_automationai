@@ -1,19 +1,9 @@
 import { test as base } from '@playwright/test';
 import { APIRequestContext } from '@playwright/test';
 
-import { AuthAPI } from '../api/services/auth.api';
-import { ProductAPI } from '../api/services/product.api';
-import { CartAPI } from '../api/services/cart.api';
-
-/**
- * =========================
- * API Fixture Layer
- * =========================
- * Purpose:
- * - Provide initialized API services
- * - Shared APIRequestContext
- * - Used by API tests & hybrid flows
- */
+import { AuthAPI } from '../api/auth.api';
+import { ProductAPI } from '../api/product.api';
+import { CartAPI } from '../api/cart.api';  
 
 type APIFixtures = {
   apiContext: APIRequestContext;
@@ -25,7 +15,7 @@ type APIFixtures = {
 export const apiTest = base.extend<APIFixtures>({
   apiContext: async ({ playwright }, use) => {
     const context = await playwright.request.newContext({
-      baseURL: process.env.API_BASE_URL || 'https://fakestoreapi.com',
+      baseURL: 'https://fakestoreapi.com',
     });
 
     await use(context);

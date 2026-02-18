@@ -1,19 +1,32 @@
 /**
+ * ==================================
  * Cart API Flow
- * -------------
- * Handles cart operations via API.
+ * ==================================
+ * Business flow for cart operations
  */
 
+import { APIRequestContext } from '@playwright/test';
 import { CartAPI } from '../../api/cart.api';
 
 export class CartAPIFlow {
 
-  /**
-   * Add item to cart via API
-   */
-  static async addItem(token: string, productId: string) {
+  private cartAPI: CartAPI;
 
-    return await CartAPI.addItem(token, productId);
+  constructor(private request: APIRequestContext) {
+
+    this.cartAPI = new CartAPI(request);
+
+  }
+
+  /**
+   * Add item to cart
+   */
+  async addItem(
+    token: string,
+    productId: number
+  ) {
+
+    return await this.cartAPI.addItem(token, productId);
 
   }
 

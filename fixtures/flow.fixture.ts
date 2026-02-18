@@ -1,4 +1,5 @@
 import { test as base } from '@playwright/test';
+import type { Page, APIRequestContext } from '@playwright/test';
 
 /**
  * UI FLOWS
@@ -22,16 +23,6 @@ import { PurchaseAPIFlow } from '../flows/api/purchase.api.flow';
 import { LoginHybridFlow } from '../flows/hybrid/login.hybrid.flow';
 import { PurchaseHybridFlow } from '../flows/hybrid/purchase.hybrid.flow';
 
-/**
- * =========================
- * Flow Fixture Layer
- * =========================
- * Purpose:
- * - Provide ready-to-use business flows
- * - Used by E2E tests
- * - AI generation entry point
- */
-
 type FlowFixtures = {
   loginUIFlow: LoginUIFlow;
   cartUIFlow: CartUIFlow;
@@ -49,9 +40,7 @@ type FlowFixtures = {
 
 export const flowTest = base.extend<FlowFixtures>({
   /**
-   * =========================
    * UI FLOWS
-   * =========================
    */
   loginUIFlow: async ({ page }, use) => {
     await use(new LoginUIFlow(page));
@@ -70,9 +59,7 @@ export const flowTest = base.extend<FlowFixtures>({
   },
 
   /**
-   * =========================
    * API FLOWS
-   * =========================
    */
   authAPIFlow: async ({ request }, use) => {
     await use(new AuthAPIFlow(request));
@@ -91,9 +78,7 @@ export const flowTest = base.extend<FlowFixtures>({
   },
 
   /**
-   * =========================
    * HYBRID FLOWS
-   * =========================
    */
   loginHybridFlow: async ({ page, request }, use) => {
     await use(new LoginHybridFlow(page, request));
