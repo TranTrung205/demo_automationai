@@ -1,92 +1,55 @@
-import fs from 'fs';
-import path from 'path';
-import { StepTracker } from '../metadata/step-tracker';
+import axios from "axios";
 
-export class AIGenerator {
+/**
+ * Call local Ollama LLM
+ */
+async function askLLM(prompt: string): Promise<string> {
 
-  /**
-   * Convert tracked steps → Playwright test code
-   */
-  static generateTestCode(testName: string = 'AI Generated Test'): string {
-
-    const steps = StepTracker.getSteps();
-
-    const actions: string[] = [];
-
-    for (const step of steps) {
-
-      switch (step.action) {
-
-        case 'goto':
-          actions.push(`await page.goto('${step.target}');`);
-          break;
-
-        case 'click':
-          actions.push(`await page.click('${step.target}');`);
-          break;
-
-        case 'fill':
-          actions.push(
-            `await page.fill('${step.target}', '${step.value ?? ''}');`
-          );
-          break;
-
-        case 'api_get':
-          actions.push(`await request.get('${step.target}');`);
-          break;
-
-        case 'api_post':
-          actions.push(
-            `await request.post('${step.target}', { data: ${step.value ?? '{}'} });`
-          );
-          break;
-
-        case 'api_put':
-          actions.push(
-            `await request.put('${step.target}', { data: ${step.value ?? '{}'} });`
-          );
-          break;
-
-        case 'api_delete':
-          actions.push(`await request.delete('${step.target}');`);
-          break;
-
-        default:
-          actions.push(`// Unknown step: ${step.action}`);
-      }
-
+  const response = await axios.post(
+    "http://127.0.0.1:11434/api/generate",
+    {
+      model: "llama3.1:8b",
+      prompt: prompt,
+      stream: false,
     }
+  );
 
-    return `
-import { test, expect } from '@playwright/test';
+  return response.data.response;
+}
 
-test('${testName}', async ({ page, request }) => {
 
-  ${actions.join('\n  ')}
+/**
+ * Generate Playwright test from requirement
+ */
+export async function generateTest(requirement: string): Promise<string> {
 
+  const prompt = `
+You are a senior Playwright automation engineer.
+
+IMPORTANT:
+- Use ONLY Playwright Test framework
+- Use: import { test, expect } from '@playwright/test'
+- DO NOT use describe()
+- DO NOT use it()
+- Test format must be:
+
+test('test name', async ({ page }) => {
+  ...
 });
+
+Rules:
+- Use TypeScript
+- Use stable selectors
+- Prefer expect(page).toHaveURL()
+- Return ONLY code
+- No markdown
+- No explanation
+
+Scenario:
+${requirement}
 `;
-  }
 
-  /**
-   * Save generated test to file
-   */
-  static saveToFile(fileName: string = 'ai-generated.spec.ts') {
+  const result = await askLLM(prompt);
 
-    const code = this.generateTestCode();
-
-    const outputDir = path.resolve(process.cwd(), 'tests/generated');
-
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    const filePath = path.join(outputDir, fileName);
-
-    fs.writeFileSync(filePath, code);
-
-    console.log('✅ AI Test generated at:', filePath);
-
-  }
-
+  return result;
 }

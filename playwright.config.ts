@@ -4,16 +4,18 @@ import { defineConfig, devices } from '@playwright/test';
  * ==================================
  * Playwright Configuration
  * ==================================
- * Includes:
  * - Multi browser
- * - AI JSON Reporter
  * - HTML Reporter
  * - Base URL
+ * - AI Agent compatible
  */
 
 export default defineConfig({
 
-  testDir: './e2e',
+  /**
+   * Test folder
+   */
+  testDir: './tests',
 
   fullyParallel: true,
 
@@ -30,8 +32,7 @@ export default defineConfig({
    */
   reporter: [
     ['list'],
-    ['html'],
-    ['./reporters/ai-json-reporter.ts']
+    ['html']
   ],
 
   /**
@@ -42,6 +43,8 @@ export default defineConfig({
   use: {
 
     baseURL: 'https://www.saucedemo.com',
+
+    headless: false,
 
     trace: 'on-first-retry',
 
@@ -72,9 +75,6 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
 
-    // {
-    //   name: 'chromium-headless',
-    //   use: { ...devices['Desktop Chrome Headless'] },
-    // },
   ],
-});   
+
+});
