@@ -1,29 +1,33 @@
-/**
- * BasePage
- *
- * Page cha của tất cả các Page khác
- *
- * Chứa các function dùng chung:
- *  - navigate
- *  - get title
- *
- * Giúp tránh duplicate code giữa các page
- */
-
 import { Page } from '@playwright/test';
+import { StepTracker } from '../ai/metadata/step-tracker';
 
 export class BasePage {
-  protected page: Page;
 
-  constructor(page: Page) {
-    this.page = page;
+  constructor(protected page: Page) {}
+
+  async click(selector: string) {
+
+    StepTracker.addStep({
+      action: 'click',
+      target: selector,
+      timestamp: Date.now()
+    });
+
+    await this.page.click(selector);
+
   }
 
-  async navigate(path: string) {
-    await this.page.goto(path);
+  async fill(selector: string, value: string) {
+
+    StepTracker.addStep({
+      action: 'fill',
+      target: selector,
+      value,
+      timestamp: Date.now()
+    });
+
+    await this.page.fill(selector, value);
+
   }
 
-  async getTitle() {
-    return this.page.title();
-  }
 }
