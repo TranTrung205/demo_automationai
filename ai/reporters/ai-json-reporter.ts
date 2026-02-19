@@ -1,10 +1,13 @@
 /**
  * ==================================
- * AI JSON REPORTER
+ * AI JSON REPORTER V2 (FINAL)
  * ==================================
  *
- * Converts Playwright test results into
- * structured dataset for AI training.
+ * Combines:
+ * - Test result
+ * - Duration
+ * - Error
+ * - Metadata steps (from StepTracker)
  *
  * Output:
  * reports/ai-report.json
@@ -13,24 +16,34 @@
 import fs from 'fs';
 import path from 'path';
 import {
-  FullConfig,
-  Suite,
+  Reporter,
   TestCase,
-  TestResult,
-  Reporter
+  TestResult
 } from '@playwright/test/reporter';
+
+import { StepTracker } from '../metadata/step-tracker';
 
 class AIJsonReporter implements Reporter {
 
   private results: any[] = [];
 
+  onTestBegin() {
+
+    // Reset steps for new test
+    StepTracker.reset();
+
+  }
+
   onTestEnd(test: TestCase, result: TestResult) {
 
+    const steps = StepTracker.getSteps();
+
     this.results.push({
-      title: test.title,
+      test: test.title,
       status: result.status,
       duration: result.duration,
       error: result.error?.message || null,
+      steps
     });
 
   }
@@ -50,7 +63,7 @@ class AIJsonReporter implements Reporter {
       JSON.stringify(this.results, null, 2)
     );
 
-    console.log('✅ AI Report Generated:', filePath);
+    console.log('✅ AI Dataset Generated:', filePath);
 
   }
 

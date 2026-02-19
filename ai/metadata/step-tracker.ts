@@ -1,11 +1,11 @@
 /**
  * ==================================
- * STEP TRACKER
+ * STEP TRACKER (FINAL V2)
  * ==================================
  *
  * Collects execution steps for AI dataset.
  *
- * Example output:
+ * Example:
  * [
  *   { action: "click", target: "#login-button" },
  *   { action: "fill", target: "#user-name" }
@@ -23,22 +23,25 @@ export class StepTracker {
 
   private static steps: AIStep[] = [];
 
+  /**
+   * Add new step
+   */
   static addStep(step: AIStep) {
-
     this.steps.push(step);
-
   }
 
-  static getSteps() {
-
+  /**
+   * Get all steps
+   */
+  static getSteps(): AIStep[] {
     return this.steps;
-
   }
 
-  static clear() {
-
+  /**
+   * Reset steps (used between tests)
+   */
+  static reset() {
     this.steps = [];
-
   }
 
 }
