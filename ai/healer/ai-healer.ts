@@ -8,8 +8,11 @@ async function askLLM(prompt: string): Promise<string> {
     "http://127.0.0.1:11434/api/generate",
     {
       model: "llama3.1:8b",
-      prompt: prompt,
+      prompt,
       stream: false,
+      options: {
+        temperature: 0.1
+      }
     }
   );
 
@@ -17,17 +20,21 @@ async function askLLM(prompt: string): Promise<string> {
 }
 
 /**
- * Fix locator using AI
+ * Heal Playwright test using AI
  */
 export async function healTest(
   requirement: string,
   error: string,
   oldCode: string
 ): Promise<string> {
+
   const prompt = `
 You are a senior Playwright automation engineer.
 
-The test failed.
+A Playwright test FAILED.
+
+Your job:
+Fix the test so it passes.
 
 Requirement:
 ${requirement}
@@ -35,19 +42,24 @@ ${requirement}
 Error:
 ${error}
 
-Old Code:
+Broken Code:
 ${oldCode}
 
-Rules:
-- Fix selectors
-- Use stable selectors (#id, data-test)
-- Use expect(page).toHaveURL
-- TypeScript Playwright syntax
+STRICT RULES:
+- Keep Playwright TypeScript syntax
+- DO NOT change test intention
+- Fix selectors based on error
+- Prefer selector priority:
+  id > data-test > name > placeholder > role > text
+- If locator timeout → add expect(locator).toBeVisible()
+- ALWAYS ensure page.goto exists
+- Prefer expect(page).toHaveURL
 - Return ONLY code
-- No markdown
+- NO markdown
+- NO explanation
+
+Return the FULL corrected test.
 `;
 
-  const result = await askLLM(prompt);
-
-  return result;
+  return await askLLM(prompt);
 }
