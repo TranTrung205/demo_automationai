@@ -1,127 +1,64 @@
-import fs from "fs";
-import { execSync } from "child_process";
+// orchestrator.ts
+import fs from "fs/promises";
+import path from "path";
 
-import { scanDOM } from "./scanner/dom-scanner";
-import { generateTest } from "./generator/ai-generator";
+import { generatePlaywrightTest } from "./generator/ai-generator";
 import { healTest } from "./healer/ai-healer";
+import { runTest } from "./runner/test-runner";
 
-/**
- * Clean AI output
- */
-function cleanCode(raw: string): string {
-  return raw
-    .replace(/Here is.*?:/gi, "")
-    .replace(/```typescript/g, "")
-    .replace(/```ts/g, "")
-    .replace(/```/g, "")
-    .trim();
-}
+const TEST_FILE = "tests/generated.spec.ts";
+const DOM_FILE = "dom.json";
 
-/**
- * Convert requirement → filename
- */
-function toFileName(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+export async function runAgent(instruction: string) {
+  console.log("🤖 AI Agent started...");
+  console.log("Instruction:", instruction);
 
-async function run() {
+  console.time("TOTAL");
 
-  console.log("🚀 AI Agent V3 Multi Scenario Started");
+  try {
+    // 1️⃣ GENERATE
+    console.log("⚙️ Generating test...");
 
-  const url = "https://www.saucedemo.com";
+    let code = await generatePlaywrightTest(
+      DOM_FILE,
+      instruction
+    );
 
-  const requirements = [
-    "Login with valid user",
-    "Add product to cart",
-    "Remove product from cart",
-    "Logout user"
-  ];
+    await fs.mkdir(path.dirname(TEST_FILE), { recursive: true });
+    await fs.writeFile(TEST_FILE, code);
 
-  fs.mkdirSync("tests/ui", { recursive: true });
+    // 2️⃣ RUN FIRST TIME
+    console.log("🚀 Run attempt 1");
 
-  /**
-   * STEP 1 — Scan DOM
-   */
-  console.log("🔎 Scanning DOM...");
-  const dom = await scanDOM(url);
+    let result = await runTest();
 
-  for (const requirement of requirements) {
-
-    console.log("\n==============================");
-    console.log("🤖 Scenario:", requirement);
-
-    const fileName = toFileName(requirement);
-    const testPath = `tests/ui/ai-${fileName}.spec.ts`;
-
-    try {
-
-      /**
-       * STEP 2 — Generate
-       */
-      console.log("🧠 Generating test...");
-
-      const raw = await generateTest(
-        url,          // ✅ FIX QUAN TRỌNG
-        requirement,
-        dom
-      );
-
-      const code = cleanCode(raw);
-
-      fs.writeFileSync(testPath, code);
-
-      console.log("✅ Test generated →", testPath);
-
-      /**
-       * STEP 3 — Run
-       */
-      console.log("▶ Running Playwright...");
-
-      execSync(`npx playwright test ${testPath}`, {
-        stdio: "inherit",
-      });
-
-      console.log("🎉 Test Passed");
-
-    } catch (err: any) {
-
-      console.log("❌ Test Failed — Healing...");
-
-      const errorMessage = err.toString();
-      const oldCode = fs.readFileSync(testPath, "utf-8");
-
-      /**
-       * STEP 4 — Heal
-       */
-      const healedRaw = await healTest(
-        requirement,
-        errorMessage,
-        oldCode
-      );
-
-      const healedCode = cleanCode(healedRaw);
-
-      fs.writeFileSync(testPath, healedCode);
-
-      console.log("🩹 Healed test saved");
-
-      /**
-       * STEP 5 — Re-run
-       */
-      console.log("▶ Re-running...");
-
-      execSync(`npx playwright test ${testPath}`, {
-        stdio: "inherit",
-      });
-
-      console.log("✅ Healing completed");
+    if (result.success) {
+      console.log("✅ Test passed");
+      console.timeEnd("TOTAL");
+      return;
     }
+
+    // 3️⃣ HEAL (1 TIME ONLY → FAST)
+    console.log("❌ Failed. Healing...");
+
+    code = await healTest(code, result.error || "");
+
+    await fs.writeFile(TEST_FILE, code);
+
+    console.log("🚀 Run attempt 2");
+
+    result = await runTest();
+
+    if (result.success) {
+      console.log("✅ Test passed after healing");
+    } else {
+      console.log("❌ Still failed");
+      console.log("Error:", result.error);
+    }
+
+  } catch (err: any) {
+    console.error("🔥 Agent crashed:", err.message);
   }
 
-  console.log("\n🚀 ALL SCENARIOS COMPLETED");
+  console.timeEnd("TOTAL");
 }
-
-run();

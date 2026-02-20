@@ -2,20 +2,22 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * ==================================
- * Playwright Configuration
+ * Playwright Configuration (FINAL)
  * ==================================
- * - Multi browser
- * - HTML Reporter
- * - Base URL
- * - AI Agent compatible
+ * Optimized for AI Test Agent
  */
 
 export default defineConfig({
 
   /**
-   * Test folder
+   * Test directory
    */
   testDir: './tests',
+
+  /**
+   * Important for AI generated tests
+   */
+  testMatch: /.*\.spec\.ts/,
 
   fullyParallel: true,
 
@@ -26,13 +28,22 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
 
   /**
+   * Timeout (safe for AI runs)
+   */
+  timeout: 60 * 1000,
+
+  expect: {
+    timeout: 10 * 1000,
+  },
+
+  /**
    * ==================================
    * REPORTERS
    * ==================================
    */
   reporter: [
     ['list'],
-    ['html']
+    ['html', { open: 'never' }]
   ],
 
   /**
@@ -46,11 +57,15 @@ export default defineConfig({
 
     headless: false,
 
+    actionTimeout: 15 * 1000,
+
+    navigationTimeout: 30 * 1000,
+
     trace: 'on-first-retry',
 
     screenshot: 'only-on-failure',
 
-    video: 'retain-on-failure'
+    video: 'retain-on-failure',
   },
 
   /**
@@ -62,9 +77,12 @@ export default defineConfig({
 
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+      },
     },
 
+    // Enable later if needed
     // {
     //   name: 'firefox',
     //   use: { ...devices['Desktop Firefox'] },

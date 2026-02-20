@@ -1,56 +1,83 @@
-import axios from "axios";
+// ai-generator.ts
+// Generate Playwright test using Ollama + deepseek-coder
 
-/**
- * Call local LLM via Ollama
- */
-async function askLLM(prompt: string): Promise<string> {
-  const response = await axios.post(
-    "http://127.0.0.1:11434/api/generate",
-    {
-      model: "llama3.1:8b",
-      prompt,
-      stream: false,
-      options: {
-        temperature: 0.2,   // giảm hallucination
-      }
-    }
-  );
+import fs from "fs/promises";
 
-  return response.data.response;
+export interface AIGenerateOptions {
+  model?: string;
+  temperature?: number;
 }
 
-/**
- * Generate Playwright test from requirement + DOM
- */
-export async function generateTest(
-  url: string,
-  requirement: string,
-  dom: string
+const OLLAMA_URL =
+  process.env.OLLAMA_URL || "http://127.0.0.1:11434/api/generate";
+
+function cleanCodeBlock(text: string): string {
+  if (!text) return "";
+
+  return text
+    .replace(/```typescript/g, "")
+    .replace(/```ts/g, "")
+    .replace(/```javascript/g, "")
+    .replace(/```js/g, "")
+    .replace(/```/g, "")
+    .trim();
+}
+
+export async function generatePlaywrightTest(
+  domPath: string,
+  instruction: string,
+  options: AIGenerateOptions = {}
 ): Promise<string> {
+  const model = options.model || "deepseek-coder:6.7b";
+  const temperature = options.temperature ?? 0.1;
+
+  const dom = await fs.readFile(domPath, "utf-8");
 
   const prompt = `
 You are a senior Playwright automation engineer.
 
-Website URL:
-${url}
+TASK:
+Generate a complete Playwright TypeScript test.
 
-Rules:
-- Use TypeScript
-- Use Playwright test syntax
-- ALWAYS start with page.goto("${url}")
-- NEVER use example.com
-- Use provided DOM selectors
-- Prefer expect(page).toHaveURL
-- Return ONLY code
-- No markdown
+STRICT RULES:
+- Use: import { test, expect } from '@playwright/test'
+- Prefer getByRole / getByLabel / getByText
+- Avoid XPath unless necessary
+- Use await properly
+- Return ONLY runnable code
 - No explanation
+- No markdown
 
-Scenario:
-${requirement}
+TEST SCENARIO:
+${instruction}
 
-DOM:
+DOM SNAPSHOT:
 ${dom}
 `;
 
-  return await askLLM(prompt);
+  const response = await fetch(OLLAMA_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      prompt,
+      stream: false,
+      options: {
+        temperature,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`AI request failed: ${response.status}`);
+  }
+
+  const data: any = await response.json();
+
+  const rawText = data.response || "";
+  const cleaned = cleanCodeBlock(rawText);
+
+  return cleaned;
 }

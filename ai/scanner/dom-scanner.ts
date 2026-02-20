@@ -1,50 +1,18 @@
-import { chromium } from "@playwright/test";
+import { Page } from "@playwright/test";
 
-/**
- * Scan DOM elements for AI
- */
-export async function scanDOM(url: string): Promise<string> {
-
-  const browser = await chromium.launch({ headless: true });
-
-  const page = await browser.newPage();
-
-  await page.goto(url, { waitUntil: "domcontentloaded" });
-
-  const dom = await page.evaluate(() => {
-
-    const elements = Array.from(
-      document.querySelectorAll("input, button, a, select, textarea")
+export async function scanDOM(page: Page) {
+  const elements = await page.evaluate(() => {
+    const interactive = Array.from(
+      document.querySelectorAll("button, input, a, select")
     );
 
-    return elements.map(el => {
-
-      const element = el as HTMLElement;
-
-      return {
-        tag: element.tagName,
-
-        id: element.id || null,
-
-        name: element.getAttribute("name"),
-
-        type: element.getAttribute("type"),
-
-        placeholder: element.getAttribute("placeholder"),
-
-        text: element.textContent?.trim(),
-
-        class: element.className,
-
-        "data-test": element.getAttribute("data-test"),
-
-        aria: element.getAttribute("aria-label")
-      };
-    });
-
+    return interactive.map(el => ({
+      tag: el.tagName,
+      text: el.textContent,
+      id: el.id,
+      class: el.className
+    }));
   });
 
-  await browser.close();
-
-  return JSON.stringify(dom, null, 2);
+  return JSON.stringify(elements, null, 2);
 }

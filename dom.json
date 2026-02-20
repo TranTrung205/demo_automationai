@@ -1,0 +1,20 @@
+[
+  {
+    "tag": "INPUT",
+    "text": "",
+    "id": "user-name",
+    "class": "input_error form_input"
+  },
+  {
+    "tag": "INPUT",
+    "text": "",
+    "id": "password",
+    "class": "input_error form_input"
+  },
+  {
+    "tag": "INPUT",
+    "text": "",
+    "id": "login-button",
+    "class": "submit-button btn_action"
+  }
+]

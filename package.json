@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "agent": "tsx agent/runner.ts"
+    "agent": "tsx agent/runner.ts",
+    "ai": "tsx index.ts"
+
   },
   "dependencies": {
     "@types/node": "^25.2.3",

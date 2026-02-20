@@ -1,65 +1,22 @@
-import axios from "axios";
+import { ollamaChat } from "../llm/ollama-client";
 
-/**
- * Call Ollama
- */
-async function askLLM(prompt: string): Promise<string> {
-  const response = await axios.post(
-    "http://127.0.0.1:11434/api/generate",
-    {
-      model: "llama3.1:8b",
-      prompt,
-      stream: false,
-      options: {
-        temperature: 0.1
-      }
-    }
-  );
-
-  return response.data.response;
-}
-
-/**
- * Heal Playwright test using AI
- */
-export async function healTest(
-  requirement: string,
-  error: string,
-  oldCode: string
-): Promise<string> {
-
+export async function healTest(code: string, error: string) {
   const prompt = `
-You are a senior Playwright automation engineer.
+You are a Playwright self-healing AI.
 
-A Playwright test FAILED.
-
-Your job:
-Fix the test so it passes.
-
-Requirement:
-${requirement}
+Test Code:
+${code}
 
 Error:
 ${error}
 
-Broken Code:
-${oldCode}
+Fix the code.
 
-STRICT RULES:
-- Keep Playwright TypeScript syntax
-- DO NOT change test intention
-- Fix selectors based on error
-- Prefer selector priority:
-  id > data-test > name > placeholder > role > text
-- If locator timeout → add expect(locator).toBeVisible()
-- ALWAYS ensure page.goto exists
-- Prefer expect(page).toHaveURL
-- Return ONLY code
-- NO markdown
-- NO explanation
-
-Return the FULL corrected test.
+Rules:
+- Keep structure
+- Only modify broken locator or step
+- Return code only
 `;
 
-  return await askLLM(prompt);
+  return await ollamaChat(prompt);
 }
