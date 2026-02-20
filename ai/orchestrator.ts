@@ -1,10 +1,8 @@
 import fs from "fs";
-import path from "path";
+import { execSync } from "child_process";
 import { generateTest } from "./generator/ai-generator";
+import { healTest } from "./healer/ai-healer";
 
-/**
- * Clean AI response
- */
 function cleanCode(raw: string): string {
   return raw
     .replace(/Here is.*?:/gi, "")
@@ -15,43 +13,47 @@ function cleanCode(raw: string): string {
 }
 
 async function run() {
+  console.log("🚀 AI Agent V2 Started");
+
+  const requirement = "Login to saucedemo with valid user";
+
+  // Step 1 — Generate test
+  const raw = await generateTest(requirement);
+  const code = cleanCode(raw);
+
+  const testPath = "tests/ui/ai-login.spec.ts";
+
+  fs.writeFileSync(testPath, code);
+
+  console.log("✅ Test generated");
+
   try {
+    console.log("▶ Running Playwright...");
+    execSync("npx playwright test tests/ui/ai-login.spec.ts", {
+      stdio: "inherit",
+    });
 
-    console.log("🚀 AI Agent Started");
+    console.log("🎉 Test Passed — No healing needed");
+  } catch (err: any) {
+    console.log("❌ Test Failed — Healing...");
 
-    const requirement = "Login to saucedemo with valid user";
+    const errorMessage = err.toString();
 
-    const rawCode = await generateTest(requirement);
+    // Step 2 — Heal test
+    const healedRaw = await healTest(requirement, errorMessage, code);
+    const healedCode = cleanCode(healedRaw);
 
-    console.log("Generated Test:\n", rawCode);
+    fs.writeFileSync(testPath, healedCode);
 
-    /**
-     * Clean AI output
-     */
-    const cleanedCode = cleanCode(rawCode);
+    console.log("🩹 Healed test saved");
 
-    /**
-     * Output path
-     */
-    const outputDir = "tests/ui";
-    const outputFile = path.join(outputDir, "ai-login.spec.ts");
+    console.log("▶ Re-running Playwright...");
 
-    /**
-     * Ensure folder exists
-     */
-    fs.mkdirSync(outputDir, { recursive: true });
+    execSync("npx playwright test tests/ui/ai-login.spec.ts", {
+      stdio: "inherit",
+    });
 
-    /**
-     * Save file
-     */
-    fs.writeFileSync(outputFile, cleanedCode);
-
-    console.log("✅ Test saved to:", outputFile);
-
-  } catch (error: any) {
-
-    console.error("❌ Agent Error:", error.message);
-
+    console.log("✅ Healing completed");
   }
 }
 
