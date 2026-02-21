@@ -1,18 +1,3 @@
-/**
- * ==================================
- * AI JSON REPORTER V2 (FINAL)
- * ==================================
- *
- * Combines:
- * - Test result
- * - Duration
- * - Error
- * - Metadata steps (from StepTracker)
- *
- * Output:
- * reports/ai-report.json
- */
-
 import fs from 'fs';
 import path from 'path';
 import {
@@ -22,28 +7,42 @@ import {
 } from '@playwright/test/reporter';
 
 import { StepTracker } from '../metadata/step-tracker';
+import { detectErrorType } from '../analyzer/error-analyzer';
 
 class AIJsonReporter implements Reporter {
 
   private results: any[] = [];
 
   onTestBegin() {
-
-    // Reset steps for new test
     StepTracker.reset();
-
   }
 
   onTestEnd(test: TestCase, result: TestResult) {
 
     const steps = StepTracker.getSteps();
 
+    const errorMessage = result.error?.message || null;
+
+    const errorType = errorMessage
+      ? detectErrorType(errorMessage)
+      : null;
+
     this.results.push({
       test: test.title,
       status: result.status,
       duration: result.duration,
-      error: result.error?.message || null,
-      steps
+
+      error: errorMessage,
+      errorType,
+
+      steps,
+
+      timestamp: Date.now(),
+
+      agent: {
+        version: "V5",
+        framework: "Playwright AI",
+      }
     });
 
   }

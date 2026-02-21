@@ -1,4 +1,4 @@
-import { runAgent } from "./ai/orchestrator";
+import { runAgent } from "./ai/orchestrator.js";
 
 /**
  * Add default context if user prompt too vague

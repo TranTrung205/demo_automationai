@@ -1,0 +1,59 @@
+[
+  {
+    "tag": "input",
+    "text": null,
+    "id": "user-name",
+    "class": "input_error form_input",
+    "name": "user-name",
+    "placeholder": "Username",
+    "type": "text",
+    "role": null,
+    "ariaLabel": null,
+    "label": null,
+    "visible": true,
+    "position": {
+      "x": 494,
+      "y": 154,
+      "width": 292,
+      "height": 39
+    }
+  },
+  {
+    "tag": "input",
+    "text": null,
+    "id": "password",
+    "class": "input_error form_input",
+    "name": "password",
+    "placeholder": "Password",
+    "type": "password",
+    "role": null,
+    "ariaLabel": null,
+    "label": null,
+    "visible": true,
+    "position": {
+      "x": 494,
+      "y": 208,
+      "width": 292,
+      "height": 39
+    }
+  },
+  {
+    "tag": "input",
+    "text": null,
+    "id": "login-button",
+    "class": "submit-button btn_action",
+    "name": "login-button",
+    "placeholder": null,
+    "type": "submit",
+    "role": null,
+    "ariaLabel": null,
+    "label": null,
+    "visible": true,
+    "position": {
+      "x": 494,
+      "y": 302,
+      "width": 292,
+      "height": 49
+    }
+  }
+]

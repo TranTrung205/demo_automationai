@@ -1,20 +1,53 @@
 import { chromium } from "@playwright/test";
 import fs from "fs";
-import { scanDOM } from "./dom-scanner";
+import path from "path";
+import { scanDOM } from "./dom-scanner.js";
 
-async function main() {
-  const browser = await chromium.launch();
+const OUTPUT_FILE = "dom/dom.json";
+
+export async function runScanner(url: string) {
+
+  console.log("🔍 Scanning DOM:", url);
+
+  const browser = await chromium.launch({
+    headless: true
+  });
+
   const page = await browser.newPage();
 
-  await page.goto("https://www.saucedemo.com");
+  try {
 
-  const dom = await scanDOM(page);
+    await page.goto(url, {
+      waitUntil: "domcontentloaded"
+    });
 
-  fs.writeFileSync("dom.json", dom);
+    await page.waitForTimeout(2000);
 
-  console.log("✅ DOM saved to dom.json");
+    const dom = await scanDOM(page);
 
-  await browser.close();
+    const dir = path.dirname(OUTPUT_FILE);
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    fs.writeFileSync(OUTPUT_FILE, dom);
+
+    console.log("✅ DOM saved:", OUTPUT_FILE);
+
+  } catch (err: any) {
+
+    console.error("❌ Scanner failed:", err.message);
+
+  } finally {
+
+    await browser.close();
+
+  }
 }
 
-main();
+
+// CLI mode
+const url = process.argv[2] || "https://www.saucedemo.com";
+
+runScanner(url);

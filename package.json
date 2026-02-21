@@ -4,8 +4,18 @@
   "type": "module",
   "scripts": {
     "agent": "tsx agent/runner.ts",
-    "ai": "tsx index.ts"
+    "ai": "tsx index.ts",
 
+    "test": "playwright test",
+    "test:ui": "playwright test tests/ui",
+    "test:api": "playwright test tests/api",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+
+    "orchestrator": "tsx orchestrator.ts",
+    "scan": "tsx scanner/dom-scanner.ts",
+    "generate": "tsx generator/ai-generator.ts",
+    "heal": "tsx healer/ai-healer.ts"
   },
   "dependencies": {
     "@types/node": "^25.2.3",

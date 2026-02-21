@@ -1,0 +1,18 @@
+[
+  {
+    "instruction": "\nTest login functionality on https://www.saucedemo.com\n\nusername: standard_user\npassword: secret_sauce\n\nExpected: user navigates to inventory page\n",
+    "success": false,
+    "error": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.\n\n"
+  },
+  {
+    "instruction": "\nTest login functionality on https://www.saucedemo.com\n\nusername: standard_user\npassword: secret_sauce\n\nExpected: user navigates to inventory page\n",
+    "success": false,
+    "error": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.\n\n"
+  },
+  {
+    "instruction": "\nTest login functionality on https://www.saucedemo.com\n\nusername: standard_user\npassword: secret_sauce\n\nExpected: user navigates to inventory page\n",
+    "success": false,
+    "error": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.\n\n",
+    "test": "import { test, expect } from '@playwright/test';\n\ntest('should navigate to inventory page after login', async ({ page }) => {\n  await page.goto('https://www.saucedemo.com');\n  await page.fill('#user-name', 'standard_user');\n  await page.fill('#password', 'secret_sauce');\n  await page.click('#login-button');\n\n  const inventoryPage = await page.locator('text=Inventory');\n  expect(await inventoryPage.isVisible()).toBeTruthy();\n});"
+  }
+]

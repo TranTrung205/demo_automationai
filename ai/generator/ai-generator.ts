@@ -1,37 +1,69 @@
-// ai-generator.ts
-// Generate Playwright test using Ollama + deepseek-coder
-
 import fs from "fs/promises";
+import { ollamaChat } from "../llm/ollama-client";
 
 export interface AIGenerateOptions {
   model?: string;
   temperature?: number;
+  retries?: number;
 }
 
-const OLLAMA_URL =
-  process.env.OLLAMA_URL || "http://127.0.0.1:11434/api/generate";
-
-function cleanCodeBlock(text: string): string {
+/**
+ * Extract code from markdown
+ */
+function extractCode(text: string): string {
   if (!text) return "";
 
-  return text
-    .replace(/```typescript/g, "")
-    .replace(/```ts/g, "")
-    .replace(/```javascript/g, "")
-    .replace(/```js/g, "")
-    .replace(/```/g, "")
-    .trim();
+  const match = text.match(/```(?:typescript|ts|javascript)?\n([\s\S]*?)```/);
+
+  if (match) return match[1].trim();
+
+  return text.trim();
 }
 
-export async function generatePlaywrightTest(
+/**
+ * Validate Playwright code
+ */
+function validate(code: string): boolean {
+
+  if (!code) return false;
+
+  if (!code.includes("test(")) return false;
+
+  if (!code.includes("@playwright/test")) return false;
+
+  if (!code.includes("await")) return false;
+
+  return true;
+}
+
+/**
+ * Fallback minimal test
+ */
+function fallbackTest(): string {
+
+  return `
+import { test, expect } from '@playwright/test';
+
+test('basic test', async ({ page }) => {
+  await page.goto('https://example.com');
+  await expect(page).toHaveURL(/example/);
+});
+`;
+}
+
+/**
+ * Generate Playwright test
+ */
+export async function generateTest(
   domPath: string,
   instruction: string,
   options: AIGenerateOptions = {}
 ): Promise<string> {
-  const model = options.model || "deepseek-coder:6.7b";
-  const temperature = options.temperature ?? 0.1;
 
   const dom = await fs.readFile(domPath, "utf-8");
+
+  const temperature = options.temperature ?? 0.1;
+  const retries = options.retries ?? 2;
 
   const prompt = `
 You are a senior Playwright automation engineer.
@@ -40,11 +72,15 @@ TASK:
 Generate a complete Playwright TypeScript test.
 
 STRICT RULES:
-- Use: import { test, expect } from '@playwright/test'
+
+- Must use: import { test, expect } from '@playwright/test'
+- Must use async ({ page })
+- Must compile without errors
+- Must contain at least one assertion
 - Prefer getByRole / getByLabel / getByText
 - Avoid XPath unless necessary
-- Use await properly
-- Return ONLY runnable code
+- Use proper awaits
+- Return ONLY code
 - No explanation
 - No markdown
 
@@ -55,29 +91,26 @@ DOM SNAPSHOT:
 ${dom}
 `;
 
-  const response = await fetch(OLLAMA_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      prompt,
-      stream: false,
-      options: {
-        temperature,
-      },
-    }),
-  });
+  for (let i = 1; i <= retries; i++) {
 
-  if (!response.ok) {
-    throw new Error(`AI request failed: ${response.status}`);
+    console.log(`🧠 Generate attempt ${i}`);
+
+    const raw = await ollamaChat(prompt, {
+      model: options.model || "phi3",
+      temperature,
+      system: "You are a senior Playwright automation engineer."
+    });
+
+    const code = extractCode(raw);
+
+    if (validate(code)) {
+      return code;
+    }
+
+    console.log("⚠️ Invalid generated test");
   }
 
-  const data: any = await response.json();
+  console.log("❌ Generator failed — using fallback");
 
-  const rawText = data.response || "";
-  const cleaned = cleanCodeBlock(rawText);
-
-  return cleaned;
+  return fallbackTest();
 }

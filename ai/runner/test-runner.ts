@@ -1,33 +1,25 @@
-// runner/test-runner.ts
 import { exec } from "child_process";
 
-export interface TestResult {
+export async function runTest(): Promise<{
   success: boolean;
   error?: string;
-}
-
-export async function runTest(): Promise<TestResult> {
+}> {
   return new Promise((resolve) => {
 
-    const cmd = `npx playwright test tests/generated.spec.ts --reporter=line`;
-
-    console.log("🧪 Running:", cmd);
-
-    exec(cmd, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
-
-      console.log(stdout);
-      console.error(stderr);
+    exec("npx playwright test", (error, stdout, stderr) => {
 
       if (error) {
         resolve({
           success: false,
-          error: stderr || stdout,
+          error: stderr || stdout
         });
-      } else {
-        resolve({
-          success: true,
-        });
+        return;
       }
+
+      resolve({
+        success: true
+      });
+
     });
 
   });

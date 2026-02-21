@@ -1,22 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/**
- * ==================================
- * Playwright Configuration (FINAL)
- * ==================================
- * Optimized for AI Test Agent
- */
-
 export default defineConfig({
 
-  /**
-   * Test directory
-   */
   testDir: './tests',
 
-  /**
-   * Important for AI generated tests
-   */
   testMatch: /.*\.spec\.ts/,
 
   fullyParallel: true,
@@ -27,35 +14,24 @@ export default defineConfig({
 
   workers: process.env.CI ? 1 : undefined,
 
-  /**
-   * Timeout (safe for AI runs)
-   */
   timeout: 60 * 1000,
 
   expect: {
     timeout: 10 * 1000,
   },
 
-  /**
-   * ==================================
-   * REPORTERS
-   * ==================================
-   */
   reporter: [
-    ['list'],
-    ['html', { open: 'never' }]
+   ['list'],
+   ['html', { open: 'never' }]
   ],
 
-  /**
-   * ==================================
-   * SHARED SETTINGS
-   * ==================================
-   */
+  outputDir: 'test-results',   // ⭐ CLEAN OUTPUT
+
   use: {
 
     baseURL: 'https://www.saucedemo.com',
 
-    headless: false,
+    headless: true,   // ⭐ BETTER FOR AGENT
 
     actionTimeout: 15 * 1000,
 
@@ -66,13 +42,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
 
     video: 'retain-on-failure',
+
   },
 
-  /**
-   * ==================================
-   * BROWSERS
-   * ==================================
-   */
   projects: [
 
     {
@@ -81,17 +53,6 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
       },
     },
-
-    // Enable later if needed
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
-
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
 
   ],
 
