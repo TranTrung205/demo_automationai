@@ -14,99 +14,142 @@ export async function runTestV6(instruction: string) {
   console.log("🚀 V6 Agent Started");
   console.log("📝 Instruction:", instruction);
 
-  /**
-   * Load memory
-   */
-  const memory = loadMemory();
+  try {
 
-  /**
-   * Scan DOM
-   */
-  console.log("🔎 Scanning DOM...");
-  const dom = await scanDOM("https://www.saucedemo.com");
+    /**
+     * Load memory
+     */
+    console.log("📂 Loading memory...");
+    const memory = await loadMemory();
 
-  /**
-   * Plan steps
-   */
-  const steps = await planSteps(
-    instruction,
-    dom,
-    memory
-  );
+    /**
+     * Scan DOM
+     */
+    console.log("🔎 Scanning DOM...");
+    const domObject = await scanDOM("https://www.saucedemo.com");
 
-  console.log(`📋 Planner created ${steps.length} steps`);
+    const dom = JSON.stringify(domObject, null, 2);
 
-  /**
-   * Generate code for each step
-   */
-  const stepCodes: string[] = [];
+    /**
+     * Plan steps
+     */
+    console.log("🧠 Planning steps...");
+    const steps = await planSteps(
+      instruction,
+      dom,
+      memory
+    );
 
-  for (const step of steps) {
+    if (!steps || !steps.length) {
+      throw new Error("Planner returned empty steps");
+    }
 
-    console.log(`⚙️ Generating: ${step.description}`);
+    console.log(`📋 Planner created ${steps.length} steps`);
 
-    const code = await generateStepCode(step);
+    /**
+     * ⭐ FIX — SHOW STEP INDEX CLEARLY
+     */
+    steps.forEach((step, index) => {
+      console.log(
+        `➡️ Step ${index + 1}: ${step.action} ${step.target || ""}`
+      );
+    });
 
-    stepCodes.push(code);
-  }
+    /**
+     * Generate code for each step
+     */
+    const stepCodes: string[] = [];
 
-  /**
-   * Execute with healing loop
-   */
-  let attempt = 0;
-  const MAX_ATTEMPT = 3;
+    for (let i = 0; i < steps.length; i++) {
 
-  while (attempt < MAX_ATTEMPT) {
+      const step = steps[i];
 
-    console.log(`\n🚀 Execution Attempt ${attempt + 1}`);
+      console.log(
+        `⚙️ Generating Step ${i + 1}: ${step.description || step.action}`
+      );
 
-    const result: any = await executeSteps(stepCodes);
+      const code = await generateStepCode(step);
 
-    if (result.success) {
+      if (!code) {
+        throw new Error("Step generator returned empty code");
+      }
 
-      console.log("\n🎉 TEST SUCCESS");
-
-      /**
-       * Save success memory
-       */
-      saveMemory({
-        instruction,
-        steps,
-        success: true,
-        timestamp: Date.now()
-      });
-
-      return;
+      stepCodes.push(code);
     }
 
     /**
-     * Failed → heal
+     * Execute with healing loop
      */
-    const failedIndex =
-      result.failedStepIndex !== undefined
-        ? result.failedStepIndex
-        : stepCodes.length - 1;
+    let attempt = 0;
+    const MAX_ATTEMPT = 3;
 
-    console.log(`❌ Failed at step ${failedIndex + 1}`);
+    while (attempt < MAX_ATTEMPT) {
 
-    console.log("🧠 Healing...");
+      console.log(`\n🚀 Execution Attempt ${attempt + 1}`);
 
-    const healedCode = await healStep(
-      stepCodes[failedIndex],
-      result.output || ""
-    );
+      const result: any = await executeSteps(stepCodes);
 
-    stepCodes[failedIndex] = healedCode;
+      if (result?.success) {
 
-    attempt++;
+        console.log("\n🎉 TEST SUCCESS");
+
+        /**
+         * Save success memory
+         */
+        await saveMemory({
+          instruction,
+          steps,
+          success: true,
+          timestamp: Date.now()
+        });
+
+        return;
+      }
+
+      /**
+       * ⭐ FIX FAILED STEP INDEX
+       * executor returns: failedIndex
+       */
+      const failedIndex =
+        result?.failedIndex !== undefined
+          ? result.failedIndex
+          : stepCodes.length - 1;
+
+      console.log(`❌ Failed at step ${failedIndex + 1}`);
+
+      console.log("🧠 Healing step...");
+
+      const healedCode = await healStep(
+        stepCodes[failedIndex],
+        result?.output || "Unknown error"
+      );
+
+      if (!healedCode) {
+        console.log("⚠️ Healing returned empty — skipping");
+        attempt++;
+        continue;
+      }
+
+      stepCodes[failedIndex] = healedCode;
+
+      attempt++;
+    }
+
+    /**
+     * FAIL FINAL
+     */
+    console.log("\n💥 TEST FAILED AFTER RETRIES");
+
+    await saveMemory({
+      instruction,
+      steps,
+      success: false,
+      timestamp: Date.now()
+    });
+
+  } catch (err) {
+
+    console.error("\n💥 V6 run crashed");
+    console.error(err);
   }
-
-  console.log("\n💥 TEST FAILED AFTER RETRIES");
-
-  saveMemory({
-    instruction,
-    steps,
-    success: false,
-    timestamp: Date.now()
-  });
 }

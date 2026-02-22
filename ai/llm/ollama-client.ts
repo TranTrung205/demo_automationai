@@ -27,13 +27,14 @@ function cleanResponse(text: string): string {
     .trim();
 }
 
+
 /**
- * V6 Ollama Chat
- * ✔ timeout safe
- * ✔ retry
- * ✔ backoff
- * ✔ fast tokens
+ * V6 Ollama Chat PRO
+ * ✔ higher timeout
+ * ✔ retry + backoff
  * ✔ latency logs
+ * ✔ CPU friendly
+ * ✔ safe return
  */
 export async function ollamaChat(
   prompt: string,
@@ -44,9 +45,9 @@ export async function ollamaChat(
     model = DEFAULT_MODEL,
     system,
     temperature = 0.1,
-    timeoutMs = 60000,
+    timeoutMs = 180000,   // ⭐ 3 minutes (important)
     retries = 2,
-    maxTokens = 800
+    maxTokens = 400       // ⭐ reduce for phi3 speed
   } = options;
 
   const messages: any[] = [];
@@ -79,7 +80,9 @@ export async function ollamaChat(
           stream: false,
           options: {
             temperature,
-            num_predict: maxTokens
+            num_predict: maxTokens,
+            top_p: 0.9,
+            repeat_penalty: 1.1
           }
         },
         {
@@ -88,7 +91,6 @@ export async function ollamaChat(
       );
 
       const latency = ((Date.now() - start) / 1000).toFixed(1);
-
       console.log(`⚡ Ollama response in ${latency}s`);
 
       const content = res.data?.message?.content || "";
@@ -110,7 +112,8 @@ export async function ollamaChat(
         return "";
       }
 
-      await sleep(1500 * attempt);
+      // exponential backoff
+      await sleep(2000 * attempt);
     }
   }
 

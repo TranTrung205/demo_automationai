@@ -16,7 +16,8 @@
     "heal": "tsx healer/ai-healer.ts",
     "planner": "tsx scripts/test-planner.ts",
     "executor": "tsx scripts/test-executor.ts",
-    "v6": "tsx scripts/run-v6.ts"
+    "v6": "tsx scripts/run-v6.ts",
+    "iddependent_on":"step-2 success"
   },
   "dependencies": {
     "@types/node": "^25.2.3",

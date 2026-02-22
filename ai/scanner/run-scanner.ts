@@ -1,7 +1,6 @@
-import { chromium } from "@playwright/test";
 import fs from "fs";
 import path from "path";
-import { scanDOM } from "./dom-scanner.js";
+import { scanDOM } from "./dom-scanner";
 
 const OUTPUT_FILE = "dom/dom.json";
 
@@ -9,21 +8,9 @@ export async function runScanner(url: string) {
 
   console.log("🔍 Scanning DOM:", url);
 
-  const browser = await chromium.launch({
-    headless: true
-  });
-
-  const page = await browser.newPage();
-
   try {
 
-    await page.goto(url, {
-      waitUntil: "domcontentloaded"
-    });
-
-    await page.waitForTimeout(2000);
-
-    const dom = await scanDOM(page);
+    const dom = await scanDOM(url);
 
     const dir = path.dirname(OUTPUT_FILE);
 
@@ -31,7 +18,11 @@ export async function runScanner(url: string) {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    fs.writeFileSync(OUTPUT_FILE, dom);
+    fs.writeFileSync(
+      OUTPUT_FILE,
+      JSON.stringify(dom, null, 2),
+      "utf-8"
+    );
 
     console.log("✅ DOM saved:", OUTPUT_FILE);
 
@@ -39,15 +30,12 @@ export async function runScanner(url: string) {
 
     console.error("❌ Scanner failed:", err.message);
 
-  } finally {
-
-    await browser.close();
-
   }
 }
 
 
 // CLI mode
-const url = process.argv[2] || "https://www.saucedemo.com";
-
-runScanner(url);
+if (require.main === module) {
+  const url = process.argv[2] || "https://www.saucedemo.com";
+  runScanner(url);
+}

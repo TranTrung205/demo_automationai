@@ -1,0 +1,31 @@
+{
+  "instruction": "Login with standard user and verify inventory page",
+  "steps": [
+    {
+      "id": "step-1",
+      "description": "Fill username",
+      "action": "fill",
+      "target": "#user-name",
+      "value": "standard_user",
+      "expected": ""
+    },
+    {
+      "id": "step-2",
+      "description": "Fill password",
+      "action": "fill",
+      "target": "#password",
+      "value": "secret_sauce",
+      "expected": ""
+    },
+    {
+      "id": "step-3",
+      "description": "Click login",
+      "action": "click",
+      "target": "#login-button",
+      "value": "",
+      "expected": ""
+    }
+  ],
+  "success": true,
+  "timestamp": 1771784490159
+}

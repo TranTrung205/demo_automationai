@@ -4,7 +4,8 @@ export default defineConfig({
 
   testDir: './tests',
 
-  testMatch: /.*\.spec\.ts/,
+  // ⭐ IMPORTANT — use glob instead of regex
+  testMatch: '**/*.spec.ts',
 
   fullyParallel: true,
 
@@ -21,17 +22,17 @@ export default defineConfig({
   },
 
   reporter: [
-   ['list'],
-   ['html', { open: 'never' }]
+    ['list'],
+    ['html', { open: 'never' }]
   ],
 
-  outputDir: 'test-results',   // ⭐ CLEAN OUTPUT
+  outputDir: 'test-results',
 
   use: {
 
     baseURL: 'https://www.saucedemo.com',
 
-    headless: true,   // ⭐ BETTER FOR AGENT
+    headless: true,
 
     actionTimeout: 15 * 1000,
 

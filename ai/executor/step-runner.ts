@@ -1,52 +1,68 @@
-import { Page, expect } from "@playwright/test";
-import { TestStep } from "../planner/step-types";
+import fs from "fs";
+import path from "path";
+import { execSync } from "child_process";
+
+const TEST_DIR = path.join(process.cwd(), "tests", "generated");
+
+if (!fs.existsSync(TEST_DIR)) {
+  fs.mkdirSync(TEST_DIR, { recursive: true });
+}
 
 /**
- * Execute single step
+ * Wrap code into Playwright test
  */
-export async function runStep(page: Page, step: TestStep) {
+function wrapTest(code: string) {
+  return `
+import { test, expect } from '@playwright/test';
 
-  console.log(`➡️ ${step.id} — ${step.description}`);
+test('AI Step Test', async ({ page }) => {
 
-  switch (step.action) {
+${code}
 
-    case "goto":
+});
+`;
+}
 
-      if (!step.target) throw new Error("Missing URL");
+/**
+ * Run single step
+ */
+export async function runStep(stepCode: string, stepIndex: number) {
+  const filePath = path.join(TEST_DIR, `step-${stepIndex}.spec.ts`);
 
-      await page.goto(step.target);
-      break;
+  console.log(`🚀 Running step ${stepIndex}`);
 
+  try {
+    const wrapped = wrapTest(stepCode);
 
-    case "click":
+    fs.writeFileSync(filePath, wrapped);
 
-      await page.getByText(step.target!, { exact: false }).click();
-      break;
+    /**
+     * IMPORTANT: pass full path
+     */
+    execSync(
+      `npx playwright test "${filePath}" --reporter=line`,
+      {
+        stdio: "pipe",
+      }
+    );
 
+    console.log("✅ Step passed");
 
-    case "fill":
+    return { success: true };
+  } catch (err: any) {
+    console.log("❌ Step failed");
 
-      await page.getByLabel(step.target!).fill(step.value || "");
-      break;
+    const output =
+      err.stdout?.toString() ||
+      err.message ||
+      "Unknown error";
 
+    console.log("🧾 Error Output:");
+    console.log(output);
 
-    case "wait":
-
-      await page.waitForTimeout(Number(step.value) || 1000);
-      break;
-
-
-    case "assert":
-
-      await expect(
-        page.getByText(step.expected || step.target!)
-      ).toBeVisible();
-      break;
-
-
-    default:
-
-      throw new Error(`Unknown action: ${step.action}`);
+    return {
+      success: false,
+      error: output,
+    };
   }
-
 }
