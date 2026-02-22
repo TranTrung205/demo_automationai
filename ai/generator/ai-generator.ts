@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import { ollamaChat } from "../llm/ollama-client";
+import ts from "typescript";
 
 export interface AIGenerateOptions {
   model?: string;
@@ -8,33 +9,99 @@ export interface AIGenerateOptions {
 }
 
 /**
- * Extract code from markdown
+ * Extract code safely
  */
 function extractCode(text: string): string {
+
   if (!text) return "";
 
-  const match = text.match(/```(?:typescript|ts|javascript)?\n([\s\S]*?)```/);
+  // remove markdown fences
+  text = text
+    .replace(/```typescript/g, "")
+    .replace(/```ts/g, "")
+    .replace(/```javascript/g, "")
+    .replace(/```/g, "");
 
-  if (match) return match[1].trim();
+  // start from import
+  const start = text.indexOf("import");
+
+  if (start !== -1) {
+    text = text.substring(start);
+  }
+
+  // cut after last bracket
+  const end = text.lastIndexOf("}");
+
+  if (end !== -1) {
+    text = text.substring(0, end + 1);
+  }
 
   return text.trim();
 }
 
+
 /**
- * Validate Playwright code
+ * Remove hallucinated junk text
  */
-function validate(code: string): boolean {
+function sanitizeCode(code: string): string {
+
+  if (!code) return "";
+
+  // fix corrupted urls
+  code = code.replace(
+    /https:\/\/[^\s'"]+/g,
+    (url) => {
+      if (url.includes("saucedemo")) {
+        return "https://www.saucedemo.com";
+      }
+      return url;
+    }
+  );
+
+  // remove weird sentences accidentally injected
+  code = code.replace(/Corrected Test:/gi, "");
+  code = code.replace(/generalize the error.*$/gi, "");
+
+  return code.trim();
+}
+
+
+/**
+ * Validate structure
+ */
+function validateStructure(code: string): boolean {
 
   if (!code) return false;
 
-  if (!code.includes("test(")) return false;
-
   if (!code.includes("@playwright/test")) return false;
-
+  if (!code.includes("test(")) return false;
   if (!code.includes("await")) return false;
 
   return true;
 }
+
+
+/**
+ * TypeScript compile validation ⭐ VERY IMPORTANT
+ */
+function compileCheck(code: string): boolean {
+
+  try {
+
+    ts.transpileModule(code, {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS
+      }
+    });
+
+    return true;
+
+  } catch {
+
+    return false;
+  }
+}
+
 
 /**
  * Fallback minimal test
@@ -51,8 +118,9 @@ test('basic test', async ({ page }) => {
 `;
 }
 
+
 /**
- * Generate Playwright test
+ * Generate Playwright test (V6)
  */
 export async function generateTest(
   domPath: string,
@@ -63,31 +131,28 @@ export async function generateTest(
   const dom = await fs.readFile(domPath, "utf-8");
 
   const temperature = options.temperature ?? 0.1;
-  const retries = options.retries ?? 2;
+  const retries = options.retries ?? 3;
 
   const prompt = `
 You are a senior Playwright automation engineer.
 
-TASK:
-Generate a complete Playwright TypeScript test.
+Generate ONLY valid TypeScript Playwright code.
 
 STRICT RULES:
 
-- Must use: import { test, expect } from '@playwright/test'
-- Must use async ({ page })
-- Must compile without errors
-- Must contain at least one assertion
+- Use: import { test, expect } from '@playwright/test'
+- Use async ({ page })
+- Must compile
+- Must contain assertion
 - Prefer getByRole / getByLabel / getByText
-- Avoid XPath unless necessary
-- Use proper awaits
-- Return ONLY code
 - No explanation
 - No markdown
+- Return ONLY code
 
-TEST SCENARIO:
+SCENARIO:
 ${instruction}
 
-DOM SNAPSHOT:
+DOM:
 ${dom}
 `;
 
@@ -101,13 +166,28 @@ ${dom}
       system: "You are a senior Playwright automation engineer."
     });
 
-    const code = extractCode(raw);
-
-    if (validate(code)) {
-      return code;
+    if (!raw) {
+      console.log("⚠️ Empty response");
+      continue;
     }
 
-    console.log("⚠️ Invalid generated test");
+    let code = extractCode(raw);
+
+    code = sanitizeCode(code);
+
+    if (!validateStructure(code)) {
+      console.log("⚠️ Invalid structure");
+      continue;
+    }
+
+    if (!compileCheck(code)) {
+      console.log("⚠️ TypeScript compile failed");
+      continue;
+    }
+
+    console.log("✅ Test generated successfully");
+
+    return code;
   }
 
   console.log("❌ Generator failed — using fallback");

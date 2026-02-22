@@ -6,6 +6,7 @@ export interface OllamaOptions {
   temperature?: number;
   timeoutMs?: number;
   retries?: number;
+  maxTokens?: number;
 }
 
 const DEFAULT_MODEL = "phi3";
@@ -19,6 +20,7 @@ function cleanResponse(text: string): string {
   if (!text) return "";
 
   return text
+    .replace(/```json/g, "")
     .replace(/```typescript/g, "")
     .replace(/```ts/g, "")
     .replace(/```/g, "")
@@ -26,11 +28,12 @@ function cleanResponse(text: string): string {
 }
 
 /**
- * PRO Ollama Chat
- * - timeout safe
- * - retry
- * - backoff
- * - clean output
+ * V6 Ollama Chat
+ * ✔ timeout safe
+ * ✔ retry
+ * ✔ backoff
+ * ✔ fast tokens
+ * ✔ latency logs
  */
 export async function ollamaChat(
   prompt: string,
@@ -40,9 +43,10 @@ export async function ollamaChat(
   const {
     model = DEFAULT_MODEL,
     system,
-    temperature = 0.2,
-    timeoutMs = 300000,
-    retries = 3
+    temperature = 0.1,
+    timeoutMs = 60000,
+    retries = 2,
+    maxTokens = 800
   } = options;
 
   const messages: any[] = [];
@@ -61,6 +65,8 @@ export async function ollamaChat(
 
   for (let attempt = 1; attempt <= retries; attempt++) {
 
+    const start = Date.now();
+
     try {
 
       console.log(`🧠 Ollama attempt ${attempt}`);
@@ -70,13 +76,20 @@ export async function ollamaChat(
         {
           model,
           messages,
-          options: { temperature },
-          stream: false
+          stream: false,
+          options: {
+            temperature,
+            num_predict: maxTokens
+          }
         },
         {
           timeout: timeoutMs
         }
       );
+
+      const latency = ((Date.now() - start) / 1000).toFixed(1);
+
+      console.log(`⚡ Ollama response in ${latency}s`);
 
       const content = res.data?.message?.content || "";
 
@@ -97,8 +110,7 @@ export async function ollamaChat(
         return "";
       }
 
-      // exponential backoff
-      await sleep(2000 * attempt);
+      await sleep(1500 * attempt);
     }
   }
 

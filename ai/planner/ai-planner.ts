@@ -1,53 +1,122 @@
 import { ollamaChat } from "../llm/ollama-client";
+import { TestStep } from "./step-types";
 
-export interface PlanStep {
-  action: string;
-  target?: string;
-  value?: string;
-  url?: string;
-}
+/**
+ * Extract JSON array safely
+ */
+function extractJSON(text: string): string {
 
-function extractJSON(text: string): PlanStep[] {
-  try {
-    const match = text.match(/\[[\s\S]*\]/);
-    if (!match) return [];
-    return JSON.parse(match[0]);
-  } catch {
-    return [];
+  const start = text.indexOf("[");
+  const end = text.lastIndexOf("]");
+
+  if (start === -1 || end === -1) {
+    throw new Error("Planner did not return JSON array");
   }
+
+  return text.substring(start, end + 1);
 }
 
-export async function planTest(userPrompt: string): Promise<PlanStep[]> {
+/**
+ * Validate + normalize steps
+ */
+function validateSteps(steps: any[]): TestStep[] {
+
+  return steps.map((s, i) => ({
+    id: s.id || `step-${i + 1}`,
+    description: s.description || "",
+    action: s.action || "unknown",
+    target: s.target || "",
+    value: s.value,
+    expected: s.expected
+  }));
+}
+
+/**
+ * V6 Self-Planning Agent
+ */
+export async function planSteps(
+  instruction: string,
+  dom: string,
+  memory: any = {}
+): Promise<TestStep[]> {
 
   const prompt = `
-You are a senior QA automation engineer.
+You are a senior QA automation planner AI.
 
-Create a Playwright execution plan in JSON array format.
+Convert the instruction into atomic UI test steps.
 
-Allowed actions:
-- goto
-- click
-- fill
-- press
-- expect
+Instruction:
+${instruction}
 
-Rules:
-- Return ONLY JSON
-- No explanation
-- No markdown
+DOM Snapshot:
+${dom}
 
-Example:
+Memory:
+${JSON.stringify(memory)}
+
+Return ONLY JSON array.
+
+Step schema:
+
 [
-  { "action": "goto", "url": "https://example.com" },
-  { "action": "fill", "target": "Username field", "value": "user1" },
-  { "action": "click", "target": "Login button" }
+  {
+    "id": "step-1",
+    "description": "human readable",
+    "action": "goto | click | fill | assert | wait",
+    "target": "selector or url",
+    "value": "optional",
+    "expected": "optional"
+  }
 ]
 
-Task:
-${userPrompt}
+Rules:
+
+- Max 8 steps
+- Atomic actions only
+- Prefer label/text selectors
+- goto must contain full URL
+- assert must verify visible UI
+- No explanation
+- ONLY JSON
 `;
 
-  const response = await ollamaChat(prompt);
+  console.log("🧠 Planner thinking...");
 
-  return extractJSON(response);
+  const raw = await ollamaChat(prompt, {
+    temperature: 0.1
+  });
+
+  if (!raw) {
+    throw new Error("Planner received empty response");
+  }
+
+  let jsonText: string;
+
+  try {
+
+    jsonText = extractJSON(raw);
+
+  } catch (err) {
+
+    console.error("❌ Planner JSON extraction failed");
+    console.error(raw);
+    throw err;
+  }
+
+  try {
+
+    const parsed = JSON.parse(jsonText);
+
+    const steps = validateSteps(parsed);
+
+    console.log(`✅ Planner created ${steps.length} steps`);
+
+    return steps;
+
+  } catch (err) {
+
+    console.error("❌ Planner JSON parse failed");
+    console.error(jsonText);
+    throw err;
+  }
 }
