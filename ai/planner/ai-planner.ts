@@ -2,7 +2,7 @@ import { ollamaChat } from "../llm/ollama-client";
 import { TestStep } from "./step-types";
 
 /**
- * Extract JSON array safely
+ * Extract JSON array safely from LLM text
  */
 function extractJSON(text: string): string {
 
@@ -19,20 +19,21 @@ function extractJSON(text: string): string {
 /**
  * Validate + normalize steps
  */
-function validateSteps(steps: any[]): TestStep[] {
+function normalizeSteps(steps: any[]): TestStep[] {
 
   return steps.map((s, i) => ({
     id: s.id || `step-${i + 1}`,
     description: s.description || "",
     action: s.action || "unknown",
     target: s.target || "",
-    value: s.value,
-    expected: s.expected
+    value: s.value || "",
+    expected: s.expected || ""
   }));
 }
 
 /**
- * V6 Self-Planning Agent
+ * V6 Planner Agent
+ * instruction → steps[]
  */
 export async function planSteps(
   instruction: string,
@@ -41,18 +42,15 @@ export async function planSteps(
 ): Promise<TestStep[]> {
 
   const prompt = `
-You are a senior QA automation planner AI.
+You are a senior QA automation planner.
 
-Convert the instruction into atomic UI test steps.
+Convert the user instruction into atomic UI test steps.
 
 Instruction:
 ${instruction}
 
 DOM Snapshot:
 ${dom}
-
-Memory:
-${JSON.stringify(memory)}
 
 Return ONLY JSON array.
 
@@ -61,11 +59,11 @@ Step schema:
 [
   {
     "id": "step-1",
-    "description": "human readable",
+    "description": "",
     "action": "goto | click | fill | assert | wait",
-    "target": "selector or url",
-    "value": "optional",
-    "expected": "optional"
+    "target": "",
+    "value": "",
+    "expected": ""
   }
 ]
 
@@ -74,9 +72,9 @@ Rules:
 - Max 8 steps
 - Atomic actions only
 - Prefer label/text selectors
-- goto must contain full URL
-- assert must verify visible UI
-- No explanation
+- Use goto for navigation
+- assert must verify visible UI state
+- No explanations
 - ONLY JSON
 `;
 
@@ -107,7 +105,7 @@ Rules:
 
     const parsed = JSON.parse(jsonText);
 
-    const steps = validateSteps(parsed);
+    const steps = normalizeSteps(parsed);
 
     console.log(`✅ Planner created ${steps.length} steps`);
 

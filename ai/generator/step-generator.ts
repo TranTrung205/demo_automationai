@@ -1,70 +1,57 @@
+import { ollamaChat } from "../llm/ollama-client";
 import { TestStep } from "../planner/step-types";
 
 /**
- * Convert planner steps → Playwright test
+ * Extract code from LLM
  */
-export function stepsToTestCode(
-  steps: TestStep[]
-): string {
+function extractCode(text: string): string {
 
-  let body = "";
+  const match = text.match(/```(?:typescript|ts|javascript)?\n([\s\S]*?)```/);
 
-  for (const step of steps) {
+  if (match) return match[1].trim();
 
-    switch (step.action) {
+  return text.trim();
+}
 
-      case "goto":
+/**
+ * Generate Playwright code for ONE step
+ */
+export async function generateStepCode(
+  step: TestStep
+): Promise<string> {
 
-        body += `
-  await page.goto('${step.target}');
+  const prompt = `
+You are a senior Playwright automation engineer.
+
+Generate Playwright TypeScript code for ONE step.
+
+Step:
+
+${JSON.stringify(step, null, 2)}
+
+Rules:
+
+- Use: import { test, expect } from '@playwright/test'
+- Use async ({ page })
+- Must compile
+- Only implement this step
+- No extra navigation unless action = goto
+- Prefer getByRole / getByLabel / getByText
+- No explanations
+- Return ONLY code
 `;
-        break;
 
-      case "click":
+  console.log(`🧠 Generating code for ${step.id}`);
 
-        body += `
-  await page.getByText('${step.target}').click();
-`;
-        break;
+  const raw = await ollamaChat(prompt, {
+    temperature: 0.1
+  });
 
-      case "fill":
+  const code = extractCode(raw);
 
-        body += `
-  await page.getByLabel('${step.target}').fill('${step.value || ""}');
-`;
-        break;
-
-      case "assert":
-
-        body += `
-  await expect(
-    page.getByText('${step.expected || step.target}')
-  ).toBeVisible();
-`;
-        break;
-
-      case "wait":
-
-        body += `
-  await page.waitForTimeout(${step.value || 1000});
-`;
-        break;
-
-      default:
-
-        body += `
-  // Unknown step: ${step.description}
-`;
-    }
+  if (!code.includes("test(")) {
+    throw new Error("Invalid step code generated");
   }
 
-  return `
-import { test, expect } from '@playwright/test';
-
-test('AI Planned Test', async ({ page }) => {
-
-${body}
-
-});
-`;
+  return code;
 }
