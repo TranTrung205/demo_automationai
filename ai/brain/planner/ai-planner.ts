@@ -1,16 +1,19 @@
 import { ollamaChat } from "../llm/ollama-client";
 import { TestStep } from "./step-types";
 import { compressDOM } from "../utils/dom-compressor";
+import { UIState } from "../analyzer/ui-state-analyzer";
 
 
 /**
- * Detect login page from DOM
+ * Detect login page from UIState
  */
-function detectLogin(dom: any): boolean {
+function detectLogin(state: UIState): boolean {
 
-  if (!dom) return false;
+  if (!state) return false;
 
-  const text = JSON.stringify(dom).toLowerCase();
+  if (state.pageType === "login") return true;
+
+  const text = JSON.stringify(state.domSummary || "").toLowerCase();
 
   return (
     text.includes("user") &&
@@ -97,12 +100,14 @@ function extractJSON(text: string): string {
 function normalizeSteps(steps: any[]): TestStep[] {
 
   return steps.map((s, i) => ({
+
     id: s.id || `step-${i + 1}`,
     description: s.description || "",
     action: (s.action || "unknown") as any,
     target: s.target || "",
     value: s.value || "",
     expected: s.expected || ""
+
   }));
 }
 
@@ -113,20 +118,6 @@ function normalizeSteps(steps: any[]): TestStep[] {
 function fallbackPlan(instruction: string): TestStep[] {
 
   console.log("⚠️ Using fallback planner");
-
-  if (instruction.toLowerCase().includes("login")) {
-
-    return [
-      {
-        id: "step-1",
-        description: "Open application",
-        action: "goto",
-        target: "https://www.saucedemo.com",
-        value: "",
-        expected: ""
-      }
-    ];
-  }
 
   return [
     {
@@ -142,11 +133,64 @@ function fallbackPlan(instruction: string): TestStep[] {
 
 
 /**
- * V6 Planner Agent
+ * Build planner prompt with Vision + DOM
+ */
+function buildPrompt(
+  instruction: string,
+  state: UIState,
+  dom: any
+): string {
+
+  return `
+You are an AI test planner.
+
+Goal:
+Create UI automation steps to complete the instruction.
+
+Instruction:
+${instruction}
+
+Page Type:
+${state.pageType || "unknown"}
+
+Vision:
+${JSON.stringify(state.vision || {}, null, 2)}
+
+Elements:
+${JSON.stringify(dom, null, 2)}
+
+STRICT RULES:
+
+- JSON array only
+- Max 6 steps
+- Only fields:
+  id, description, action, target, value, expected
+
+Allowed actions:
+click, fill, goto, assert, wait
+
+Example:
+
+[
+  {
+    "id": "step-1",
+    "description": "Open site",
+    "action": "goto",
+    "target": "https://example.com",
+    "value": "",
+    "expected": ""
+  }
+]
+`;
+}
+
+
+/**
+ * V8 Planner Agent (Vision Aware)
  */
 export async function planSteps(
   instruction: string,
-  dom: any,
+  state: UIState,
   memory: any = {}
 ): Promise<TestStep[]> {
 
@@ -155,14 +199,14 @@ export async function planSteps(
   /**
    * ⭐ STEP 1 — Login heuristic FIRST
    */
-  if (detectLogin(dom)) {
+  if (detectLogin(state)) {
     return loginPlan();
   }
 
   /**
-   * Compress DOM for LLM
+   * Compress DOM
    */
-  const compactDOM = compressDOM(dom);
+  const compactDOM = compressDOM(state.domSummary);
 
   let domToUse = compactDOM;
 
@@ -170,32 +214,17 @@ export async function planSteps(
 
     console.log(`🧠 Planner attempt ${attempt}`);
 
-    const prompt = `
-Create steps for UI test.
-
-Instruction:
-${instruction}
-
-Elements:
-${JSON.stringify(domToUse, null, 2)}
-
-STRICT RULES:
-
-- JSON array only
-- Do NOT invent fields
-- Only: id, action, target, value, expected
-- Max 5 steps
-
-[
- { "id":"step-1", "action":"goto", "target":"", "value":"", "expected":"" }
-]
-`;
+    const prompt = buildPrompt(
+      instruction,
+      state,
+      domToUse
+    );
 
     try {
 
       const raw = await ollamaChat(prompt, {
         temperature: 0.1,
-        maxTokens: 150
+        maxTokens: 200
       });
 
       if (!raw) throw new Error("Empty LLM response");
@@ -220,6 +249,7 @@ STRICT RULES:
 
       console.log("⚠️ Planner error:", (err as any)?.message);
 
+      // shrink DOM for retry
       domToUse = domToUse.slice(
         0,
         Math.floor(domToUse.length / 2)

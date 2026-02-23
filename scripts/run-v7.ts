@@ -1,7 +1,8 @@
 import fs from "fs";
 import yaml from "js-yaml";
+import { chromium } from "playwright";
 
-import { runTestV6 } from "../ai/orchestrator-v6";
+import { runTestV7 } from "../ai/orchestrator-v7";
 
 interface Step {
   instruction: string;
@@ -12,13 +13,14 @@ interface Scenario {
   steps: Step[];
 }
 
-/**
- * READ CLI ARG
- */
-const args = process.argv;
+// ======================
+// READ CLI ARG
+// ======================
+
+const args = process.argv.slice(2);
 
 const scenarioArg = args.find((a) =>
-  a.includes("--scenario=")
+  a.startsWith("--scenario=")
 );
 
 if (!scenarioArg) {
@@ -36,9 +38,10 @@ if (!fs.existsSync(scenarioPath)) {
   process.exit(1);
 }
 
-/**
- * LOAD YAML
- */
+// ======================
+// LOAD YAML
+// ======================
+
 const fileContent = fs.readFileSync(
   scenarioPath,
   "utf8"
@@ -50,31 +53,44 @@ console.log("\n==============================");
 console.log("🚀 V7 SCENARIO:", scenario.name);
 console.log("==============================");
 
-/**
- * RUN STEPS
- */
+// ======================
+// RUN SCENARIO WITH SHARED SESSION
+// ======================
+
 async function main() {
-  for (let i = 0; i < scenario.steps.length; i++) {
 
-    const step = scenario.steps[i];
+  const browser = await chromium.launch({
+    headless: false
+  });
 
-    console.log(
-      `\n👉 STEP ${i + 1}: ${step.instruction}`
-    );
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
-    try {
+  try {
 
-      await runTestV6(step.instruction);
+    for (let i = 0; i < scenario.steps.length; i++) {
 
-    } catch (err) {
+      const step = scenario.steps[i];
 
-      console.error("❌ Step failed:", err);
-      break;
+      console.log(
+        `\n👉 STEP ${i + 1}: ${step.instruction}`
+      );
+
+      await runTestV7(step.instruction, page);
 
     }
-  }
 
-  console.log("\n✅ Scenario Completed\n");
+    console.log("\n✅ Scenario Completed\n");
+
+  } catch (err) {
+
+    console.error("❌ Scenario failed:", err);
+
+  } finally {
+
+    await browser.close();
+
+  }
 }
 
 main();

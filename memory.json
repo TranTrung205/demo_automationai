@@ -3,29 +3,21 @@
   "steps": [
     {
       "id": "step-1",
-      "description": "Fill username",
-      "action": "fill",
-      "target": "#user-name",
-      "value": "standard_user",
-      "expected": ""
+      "description": "",
+      "action": "navigate_to",
+      "target": "/inventory",
+      "value": "",
+      "expected": "Inventory page is visible"
     },
     {
       "id": "step-2",
-      "description": "Fill password",
-      "action": "fill",
-      "target": "#password",
-      "value": "secret_sauce",
-      "expected": ""
-    },
-    {
-      "id": "step-3",
-      "description": "Click login",
-      "action": "click",
-      "target": "#login-button",
-      "value": "",
-      "expected": ""
+      "description": "",
+      "action": "verify_visibility",
+      "target": "#inventoryList",
+      "value": true,
+      "expected": "The inventory list element should be present and visible on the page."
     }
   ],
-  "success": true,
-  "timestamp": 1771867252764
+  "success": false,
+  "timestamp": 1771869918635
 }

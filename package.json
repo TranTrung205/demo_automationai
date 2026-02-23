@@ -16,8 +16,8 @@
     "heal": "tsx healer/ai-healer.ts",
     "planner": "tsx scripts/test-planner.ts",
     "executor": "tsx scripts/test-executor.ts",
-    "v6": "tsx scripts/run-v6.ts",
     "v7": "tsx scripts/run-v7.ts",
+    "v7:login": "tsx scripts/run-v7.ts --scenario=scenarios/sauce-demo/login.yaml",
     "iddependent_on": "step-2 success"
   },
   "dependencies": {
