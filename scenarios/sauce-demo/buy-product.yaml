@@ -1,0 +1,10 @@
+name: Buy Product
+
+steps:
+  - instruction: Login with standard_user and secret_sauce
+  - instruction: Add Sauce Labs Backpack to cart
+  - instruction: Open cart page
+  - instruction: Click checkout
+  - instruction: Fill checkout information with John Doe
+  - instruction: Finish checkout
+  - instruction: Verify checkout success message

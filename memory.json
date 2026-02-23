@@ -1,5 +1,5 @@
 {
-  "instruction": "Login with standard user and verify inventory page",
+  "instruction": "Verify inventory page is visible",
   "steps": [
     {
       "id": "step-1",
@@ -27,5 +27,5 @@
     }
   ],
   "success": true,
-  "timestamp": 1771784490159
+  "timestamp": 1771867252764
 }

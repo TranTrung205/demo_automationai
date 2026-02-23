@@ -1,0 +1,6 @@
+name: Login Scenario
+
+steps:
+  - instruction: Open saucedemo website
+  - instruction: Login with standard_user and secret_sauce
+  - instruction: Verify inventory page is visible

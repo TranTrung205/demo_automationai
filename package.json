@@ -17,17 +17,20 @@
     "planner": "tsx scripts/test-planner.ts",
     "executor": "tsx scripts/test-executor.ts",
     "v6": "tsx scripts/run-v6.ts",
-    "iddependent_on":"step-2 success"
+    "v7": "tsx scripts/run-v7.ts",
+    "iddependent_on": "step-2 success"
   },
   "dependencies": {
     "@types/node": "^25.2.3",
     "axios": "^1.13.5",
+    "js-yaml": "^4.1.1",
     "ollama": "^0.6.3",
     "openai": "^6.21.0",
     "playwright": "^1.58.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "@types/js-yaml": "^4.0.9",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
