@@ -1,40 +1,59 @@
-export interface AIStep {
-  action: string;
-  target?: string;
-  value?: string;
+import { TestStep } from "../../brain/planner/step-types";
 
-  status?: "passed" | "failed";
+export interface StepResult {
+
+  step: TestStep;
+
+  success: boolean;
 
   error?: string;
 
-  attempt?: number;
-
-  ai?: {
-    confidence?: number;
-    healed?: boolean;
-    source?: "generator" | "healer" | "executor";
-  };
+  duration: number;
 
   timestamp: number;
 }
 
+
 export class StepTracker {
 
-  private static steps: AIStep[] = [];
+  private history: StepResult[] = [];
 
-  static addStep(step: AIStep) {
-    this.steps.push({
-      ...step,
-      timestamp: step.timestamp || Date.now()
-    });
+  startTime: number = 0;
+
+  start() {
+    this.startTime = Date.now();
   }
 
-  static getSteps(): AIStep[] {
-    return this.steps;
+  record(
+    step: TestStep,
+    success: boolean,
+    error?: string
+  ) {
+
+    const result: StepResult = {
+
+      step,
+      success,
+      error,
+      duration: Date.now() - this.startTime,
+      timestamp: Date.now()
+
+    };
+
+    this.history.push(result);
   }
 
-  static reset() {
-    this.steps = [];
+  getHistory(): StepResult[] {
+    return this.history;
   }
 
+  getLastError(): string | undefined {
+
+    const failed = this.history
+      .slice()
+      .reverse()
+      .find(s => !s.success);
+
+    return failed?.error;
+  }
 }

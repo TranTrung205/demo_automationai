@@ -1,23 +1,26 @@
-export function isNavigationInstruction(text: string) {
+/**
+ * Detect login page from DOM text
+ */
+export function isLoginPage(domText: string): boolean {
 
-  const t = text.toLowerCase();
+  const text = domText.toLowerCase();
 
   return (
-    t.includes("open") ||
-    t.includes("navigate") ||
-    t.includes("go to") ||
-    t.includes("website")
+    text.includes("user") &&
+    text.includes("pass")
   );
 }
 
 
-export function isLoginInstruction(text: string) {
+/**
+ * Detect cart page
+ */
+export function isCartPage(domText: string): boolean {
 
-  const t = text.toLowerCase();
+  const text = domText.toLowerCase();
 
   return (
-    t.includes("login") ||
-    t.includes("username") ||
-    t.includes("password")
+    text.includes("cart") &&
+    text.includes("checkout")
   );
 }

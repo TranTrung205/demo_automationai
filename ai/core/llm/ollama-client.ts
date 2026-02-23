@@ -1,40 +1,15 @@
-import axios from "axios";
+const OLLAMA_URL = "http://127.0.0.1:11434/api/generate";
 
 export interface OllamaOptions {
-  model?: string;
-  system?: string;
   temperature?: number;
-  timeoutMs?: number;
-  retries?: number;
   maxTokens?: number;
+  model?: string;
 }
 
 const DEFAULT_MODEL = "phi3";
-const OLLAMA_URL = "http://127.0.0.1:11434/api/chat";
-
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-function cleanResponse(text: string): string {
-  if (!text) return "";
-
-  return text
-    .replace(/```json/g, "")
-    .replace(/```typescript/g, "")
-    .replace(/```ts/g, "")
-    .replace(/```/g, "")
-    .trim();
-}
-
 
 /**
- * V6 Ollama Chat PRO
- * ✔ higher timeout
- * ✔ retry + backoff
- * ✔ latency logs
- * ✔ CPU friendly
- * ✔ safe return
+ * Call Ollama LLM
  */
 export async function ollamaChat(
   prompt: string,
@@ -42,78 +17,46 @@ export async function ollamaChat(
 ): Promise<string> {
 
   const {
-    model = DEFAULT_MODEL,
-    system,
     temperature = 0.1,
-    timeoutMs = 180000,   // ⭐ 3 minutes (important)
-    retries = 2,
-    maxTokens = 400       // ⭐ reduce for phi3 speed
+    maxTokens = 200,
+    model = DEFAULT_MODEL
   } = options;
 
-  const messages: any[] = [];
-
-  if (system) {
-    messages.push({
-      role: "system",
-      content: system
-    });
-  }
-
-  messages.push({
-    role: "user",
-    content: prompt
-  });
-
-  for (let attempt = 1; attempt <= retries; attempt++) {
-
-    const start = Date.now();
+  for (let attempt = 1; attempt <= 2; attempt++) {
 
     try {
 
-      console.log(`🧠 Ollama attempt ${attempt}`);
-
-      const res = await axios.post(
-        OLLAMA_URL,
-        {
+      const res = await fetch(OLLAMA_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
           model,
-          messages,
+          prompt,
           stream: false,
           options: {
             temperature,
-            num_predict: maxTokens,
-            top_p: 0.9,
-            repeat_penalty: 1.1
+            num_predict: maxTokens
           }
-        },
-        {
-          timeout: timeoutMs
-        }
-      );
+        })
+      });
 
-      const latency = ((Date.now() - start) / 1000).toFixed(1);
-      console.log(`⚡ Ollama response in ${latency}s`);
+      const data = await res.json();
 
-      const content = res.data?.message?.content || "";
-
-      if (!content) {
+      if (!data?.response) {
         throw new Error("Empty LLM response");
       }
 
-      return cleanResponse(content);
+      return data.response;
 
-    } catch (err: any) {
+    } catch (err) {
 
-      const msg = err?.message || "Unknown error";
+      console.log("⚠️ Ollama attempt failed:", attempt);
 
-      console.log(`⚠️ Ollama error attempt ${attempt}: ${msg}`);
-
-      if (attempt === retries) {
-        console.error("❌ Ollama failed after retries");
-        return "";
+      if (attempt === 2) {
+        throw err;
       }
-
-      // exponential backoff
-      await sleep(2000 * attempt);
     }
   }
 

@@ -1,79 +1,26 @@
 /**
- * Compress DOM to reduce LLM tokens
- * Keep only important / interactive elements
+ * Compress DOM for LLM consumption
  */
+export function compressDOM(dom: any): string {
 
-export interface DOMElement {
-  tag?: string;
-  text?: string;
-  id?: string;
-  class?: string;
-  name?: string;
-  placeholder?: string;
-  role?: string;
-}
+  if (!dom) return "";
 
-/**
- * Detect interactive element
- */
-function isInteractive(el: DOMElement) {
+  try {
 
-  const interactiveTags = [
-    "button",
-    "input",
-    "a",
-    "select",
-    "textarea"
-  ];
+    let text = JSON.stringify(dom);
 
-  if (!el) return false;
+    // remove long attributes
+    text = text.replace(/"style":".*?"/g, "");
+    text = text.replace(/"class":".*?"/g, "");
 
-  if (interactiveTags.includes((el.tag || "").toLowerCase()))
-    return true;
+    // limit size
+    if (text.length > 4000) {
+      text = text.slice(0, 4000);
+    }
 
-  if (el.role) return true;
+    return text;
 
-  if (el.id) return true;
-
-  if (el.class?.toLowerCase().includes("btn"))
-    return true;
-
-  return false;
-}
-
-/**
- * Clean text
- */
-function clean(text?: string) {
-
-  if (!text) return "";
-
-  return text
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 80);
-}
-
-/**
- * Main compressor
- */
-export function compressDOM(
-  elements: DOMElement[]
-) {
-
-  if (!elements || !Array.isArray(elements))
-    return [];
-
-  const filtered = elements.filter(isInteractive);
-
-  const sliced = filtered.slice(0, 25); // ⭐ sweet spot for LLM
-
-  return sliced.map((el) => ({
-    tag: el.tag,
-    text: clean(el.text),
-    id: el.id,
-    class: el.class,
-    placeholder: el.placeholder,
-    role: el.role
-  }));
+  } catch {
+    return "";
+  }
 }
