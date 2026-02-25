@@ -1,67 +1,93 @@
-import { ollamaChat } from "../llm/ollama-client";
+import { evaluateFailure } from "../brain/evaluator/ai-evaluator";
+import { healSteps } from "../execution/healer/healer";
+import { generateTest } from "../execution/generator/ai-generator";
+import { TestStep } from "../brain/planner/step-types";
 
-/**
- * Extract code from markdown blocks if LLM returns explanation
- */
-function extractCode(text: string): string {
-  const match = text.match(/```(?:typescript|ts|javascript)?\n([\s\S]*?)```/);
-  if (match) return match[1].trim();
-  return text.trim();
+export interface FixResult {
+  fixed: boolean;
+  regenerated: boolean;
+  steps: TestStep[];
+  filePath?: string;
 }
 
 /**
- * Basic Playwright validation
+ * AI Fixer Orchestrator
+ *
+ * Decide:
+ *  - heal locator
+ *  - add wait
+ *  - regenerate test
  */
-function validate(code: string) {
+export async function fixTest(
+  steps: TestStep[],
+  errorOutput: string,
+  testName: string
+): Promise<FixResult> {
 
-  if (!code.includes("test(")) {
-    throw new Error("Invalid Playwright test: missing test()");
+  console.log("🧠 Fixer analyzing failure...");
+
+  const evaluation = evaluateFailure(errorOutput);
+
+  console.log("📊 Failure type:", evaluation.type);
+  console.log("🩹 Strategy:", evaluation.strategy);
+
+  /**
+   * STRATEGY: HEAL LOCATOR / TIMEOUT
+   */
+  if (
+    evaluation.strategy === "heal-locator" ||
+    evaluation.strategy === "wait-retry"
+  ) {
+
+    const heal = healSteps(
+      steps,
+      errorOutput
+    );
+
+    if (heal.healed) {
+
+      console.log("🩹 Steps healed → regenerating test");
+
+      const generated = await generateTest(
+        heal.steps,
+        testName
+      );
+
+      return {
+        fixed: true,
+        regenerated: true,
+        steps: heal.steps,
+        filePath: generated.filePath
+      };
+    }
   }
 
-  if (!code.includes("@playwright/test")) {
-    throw new Error("Invalid Playwright import");
+  /**
+   * STRATEGY: FULL REGENERATE
+   */
+  if (evaluation.strategy === "regenerate") {
+
+    console.log("🔁 Regenerating test from scratch...");
+
+    const generated = await generateTest(
+      steps,
+      testName
+    );
+
+    return {
+      fixed: true,
+      regenerated: true,
+      steps,
+      filePath: generated.filePath
+    };
   }
-}
 
-/**
- * Fix Playwright code using AI
- */
-export async function fixWithAI(
-  originalCode: string,
-  errorLog: string
-): Promise<string> {
-
-  console.log("🤖 AI Fixer running...");
-
-  const prompt = `
-You are a senior Playwright automation engineer.
-
-Fix the failed Playwright test.
-
-STRICT RULES:
-
-- Return ONLY valid TypeScript code
-- No explanation
-- No markdown
-- Must compile
-- Must contain test()
-- Must use: import { test, expect } from '@playwright/test'
-
-Error:
-${errorLog}
-
-Original Code:
-${originalCode}
-`;
-
-  const raw = await ollamaChat(prompt, {
-    temperature: 0.1,
-    system: "You are an expert Playwright automation engineer."
-  });
-
-  const code = extractCode(raw);
-
-  validate(code);
-
-  return code;
+  /**
+   * NOTHING WORKED
+   */
+  return {
+    fixed: false,
+    regenerated: false,
+    steps
+  };
 }
