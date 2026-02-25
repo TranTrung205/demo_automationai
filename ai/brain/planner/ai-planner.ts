@@ -1,6 +1,6 @@
-import { ollamaChat } from "../llm/ollama-client";
+import { ollamaChat } from "../../core/llm/ollama-client";
 import { TestStep } from "./step-types";
-import { compressDOM } from "../utils/dom-compressor";
+import { compressDOM } from "../../core/utils/dom-compressor";
 import { UIState } from "../analyzer/ui-state-analyzer";
 
 

@@ -1,11 +1,11 @@
 import { Page } from "playwright";
 
-import { scanDOM } from "./scanner/dom-scanner";
-import { planSteps } from "./planner/planner";
-import { generateStep } from "./generator/generator";
-import { executeStep } from "./executor/executor";
+import { scanDOM } from "../perception/scanner/dom-scanner";
+import { planSteps } from "./planner/ai-planner";
+import { generateStep } from "./generator/ai-generator";
+import { executeSteps } from "../execution/executor/code-executor";
 import { healStep } from "./healer/healer";
-import { loadMemory } from "./memory/memory";
+import { loadMemory } from "../memory/knowledge/memory";
 
 /**
  * V7 Orchestrator
@@ -104,7 +104,7 @@ export async function runTestV7(
 
       console.log(`▶️ Executing step ${i + 1}`);
 
-      const ok = await executeStep(step, page);
+      const ok = await executeSteps(step, page);
 
       if (!ok) {
         console.log("❌ Failed at step", i + 1);

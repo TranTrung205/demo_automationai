@@ -1,57 +1,88 @@
-import { ollamaChat } from "../llm/ollama-client";
+import { TestStep } from "../../brain/planner/step-types";
 
-/**
- * Extract code from markdown
- */
-function extractCode(text: string): string {
-
-  const match = text.match(/```(?:typescript|ts|javascript)?\n([\s\S]*?)```/);
-
-  if (match) return match[1].trim();
-
-  return text.trim();
+export interface HealResult {
+  healed: boolean;
+  steps: TestStep[];
 }
 
 /**
- * Heal ONE step code
+ * Simple locator healing strategy
  */
-export async function healStep(
-  code: string,
+function healLocator(
+  steps: TestStep[],
   error: string
-): Promise<string> {
+): TestStep[] {
 
-  console.log("🩹 Healing step...");
+  const healed = [...steps];
 
-  const prompt = `
-Fix this Playwright test step.
+  for (const step of healed) {
 
-Rules:
+    if (step.target.includes("text=")) continue;
 
-- Return ONLY TypeScript
-- Must compile
-- Keep same intent
-- Use import { test, expect } from '@playwright/test'
-- Fix locator / timing / assertion issues
-
-Code:
-${code}
-
-Error:
-${error}
-`;
-
-  const raw = await ollamaChat(prompt, {
-    temperature: 0.1
-  });
-
-  const healed = extractCode(raw);
-
-  if (!healed.includes("test(")) {
-    console.log("⚠️ Heal invalid — returning original");
-    return code;
+    // fallback to text locator
+    if (step.description) {
+      step.target = `text=${step.description}`;
+    }
   }
 
-  console.log("✅ Step healed");
-
   return healed;
+}
+
+/**
+ * Main healer
+ */
+export function healSteps(
+  steps: TestStep[],
+  error: string
+): HealResult {
+
+  const lower = error.toLowerCase();
+
+  /**
+   * LOCATOR ERROR
+   */
+  if (
+    lower.includes("locator") ||
+    lower.includes("not found")
+  ) {
+
+    console.log("🩹 Healing locator...");
+
+    const healed = healLocator(
+      steps,
+      error
+    );
+
+    return {
+      healed: true,
+      steps: healed
+    };
+  }
+
+  /**
+   * TIMEOUT
+   */
+  if (lower.includes("timeout")) {
+
+    console.log("🩹 Healing timeout...");
+
+    const extraWait: TestStep = {
+      id: "heal-wait",
+      description: "Wait for stability",
+      action: "wait",
+      target: "",
+      value: "",
+      expected: ""
+    };
+
+    return {
+      healed: true,
+      steps: [...steps, extraWait]
+    };
+  }
+
+  return {
+    healed: false,
+    steps
+  };
 }

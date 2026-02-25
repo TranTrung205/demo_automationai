@@ -1,54 +1,39 @@
-import { Page } from "playwright";
+import { exec } from "child_process";
 
-export async function executeSteps(
-  page: Page,
-  stepCodes: string[]
-) {
-
-  try {
-
-    for (let i = 0; i < stepCodes.length; i++) {
-
-      const code = stepCodes[i];
-
-      console.log(`▶️ Executing step ${i + 1}`);
-
-      await page.waitForLoadState("domcontentloaded");
-      await page.waitForTimeout(300);
-
-      const fn = new Function(
-        "page",
-        `
-        return (async () => {
-          try {
-            ${code}
-          } catch (err) {
-            err.stepIndex = ${i};
-            throw err;
-          }
-        })();
-        `
-      );
-
-      await fn(page);
-    }
-
-    return {
-      success: true
-    };
-
-  } catch (err: any) {
-
-    console.error("❌ Step execution failed");
-
-    return {
-      success: false,
-      failedIndex: detectFailedIndex(err),
-      output: err?.message || String(err)
-    };
-  }
+export interface ExecutionResult {
+  success: boolean;
+  output: string;
 }
 
-function detectFailedIndex(err: any) {
-  return err?.stepIndex ?? 0;
+/**
+ * Execute generated Playwright test
+ */
+export function executeCode(
+  command: string
+): Promise<ExecutionResult> {
+
+  console.log("⚡ Executing:", command);
+
+  return new Promise((resolve) => {
+
+    exec(command, (error, stdout, stderr) => {
+
+      const output = `${stdout}\n${stderr}`;
+
+      if (error) {
+
+        resolve({
+          success: false,
+          output
+        });
+
+        return;
+      }
+
+      resolve({
+        success: true,
+        output
+      });
+    });
+  });
 }

@@ -1,68 +1,36 @@
-import fs from "fs";
-import path from "path";
-import { execSync } from "child_process";
+import { Page } from "@playwright/test";
+import { TestStep } from "../../brain/planner/step-types";
 
-const TEST_DIR = path.join(process.cwd(), "tests", "generated");
+export async function executeStep(
+  page: Page,
+  step: TestStep
+) {
 
-if (!fs.existsSync(TEST_DIR)) {
-  fs.mkdirSync(TEST_DIR, { recursive: true });
-}
+  console.log(`👉 ${step.description}`);
 
-/**
- * Wrap code into Playwright test
- */
-function wrapTest(code: string) {
-  return `
-import { test, expect } from '@playwright/test';
+  switch (step.action) {
 
-test('AI Step Test', async ({ page }) => {
+    case "goto":
+      await page.goto(step.target);
+      break;
 
-${code}
+    case "click":
+      await page.locator(step.target).click();
+      break;
 
-});
-`;
-}
+    case "fill":
+      await page.locator(step.target).fill(step.value || "");
+      break;
 
-/**
- * Run single step
- */
-export async function runStep(stepCode: string, stepIndex: number) {
-  const filePath = path.join(TEST_DIR, `step-${stepIndex}.spec.ts`);
+    case "assert":
+      await page.waitForSelector(step.target);
+      break;
 
-  console.log(`🚀 Running step ${stepIndex}`);
+    case "wait":
+      await page.waitForTimeout(1000);
+      break;
 
-  try {
-    const wrapped = wrapTest(stepCode);
-
-    fs.writeFileSync(filePath, wrapped);
-
-    /**
-     * IMPORTANT: pass full path
-     */
-    execSync(
-      `npx playwright test "${filePath}" --reporter=line`,
-      {
-        stdio: "pipe",
-      }
-    );
-
-    console.log("✅ Step passed");
-
-    return { success: true };
-  } catch (err: any) {
-    console.log("❌ Step failed");
-
-    const output =
-      err.stdout?.toString() ||
-      err.message ||
-      "Unknown error";
-
-    console.log("🧾 Error Output:");
-    console.log(output);
-
-    return {
-      success: false,
-      error: output,
-    };
+    default:
+      console.log("⚠️ Unknown action:", step.action);
   }
 }

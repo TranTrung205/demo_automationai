@@ -1,150 +1,44 @@
-import { ollamaChat } from "../llm/ollama-client";
+import fs from "fs/promises";
+import path from "path";
+import { TestStep } from "../../brain/planner/step-types";
+import { generateStepsCode } from "./step-generator";
 
-export interface Step {
-  id: string;
-  action: string;
-  target: string;
-  value?: any;
-  expected?: string;
+export interface GeneratedTest {
+  filePath: string;
+  code: string;
 }
 
 /**
- * Normalize action names
+ * Generate Playwright test file
  */
-function normalizeAction(action: string) {
-  if (!action) return "";
+export async function generateTest(
+  steps: TestStep[],
+  name: string = "ai-test"
+): Promise<GeneratedTest> {
 
-  const a = action.toLowerCase();
+  const stepsCode = generateStepsCode(steps);
 
-  if (a.includes("click")) return "click";
-  if (a.includes("fill") || a.includes("type")) return "fill";
-  if (a.includes("navigate")) return "navigate";
-  if (a.includes("verify")) return "verify";
+  const code = `
+import { test, expect } from '@playwright/test';
 
-  return a;
-}
+test('${name}', async ({ page }) => {
 
-/**
- * Extract JS code block
- */
-function extractCode(text: string): string {
-  if (!text) return "";
+${stepsCode}
 
-  text = text
-    .replace(/```javascript/g, "")
-    .replace(/```typescript/g, "")
-    .replace(/```ts/g, "")
-    .replace(/```/g, "");
-
-  const start = text.indexOf("async");
-
-  if (start !== -1) {
-    text = text.substring(start);
-  }
-
-  const end = text.lastIndexOf("}");
-
-  if (end !== -1) {
-    text = text.substring(0, end + 1);
-  }
-
-  return text.trim();
-}
-
-/**
- * Fallback safe code
- */
-function fallbackStep(step: Step): string {
-
-  if (step.action === "click") {
-    return `
-async function step(page){
-  await page.click("${step.target}");
-}
-`;
-  }
-
-  if (step.action === "fill") {
-    return `
-async function step(page){
-  await page.fill("${step.target}", "${step.value || ""}");
-}
-`;
-  }
-
-  if (step.action === "verify") {
-    return `
-async function step(page){
-  await page.waitForSelector("${step.target}");
-}
-`;
-  }
-
-  return `
-async function step(page){
-  console.log("fallback step");
-}
-`;
-}
-
-/**
- * Generate step code
- */
-export async function generateStep(step: Step): Promise<string> {
-
-  const action = normalizeAction(step.action);
-
-  console.log("🧠 Generating code for", step.id);
-
-  const prompt = `
-You are a senior Playwright automation engineer.
-
-Generate ONLY a JavaScript async function.
-
-STRICT RULES:
-
-- Function name: step
-- Signature: async function step(page)
-- Use Playwright Page API
-- No import
-- No test()
-- No explanation
-- Must work with existing browser session
-- Return ONLY code
-
-STEP INFO:
-
-Action: ${action}
-Target: ${step.target}
-Value: ${step.value || ""}
-Expected: ${step.expected || ""}
-
-Example:
-
-async function step(page){
-  await page.click("#login-button");
-}
+});
 `;
 
-  const raw = await ollamaChat(prompt, {
-    model: "phi3",
-    temperature: 0.1,
-    system: "You are a senior Playwright automation engineer."
-  });
+  const filePath = path.join(
+    "tests",
+    `${name}.spec.ts`
+  );
 
-  if (!raw) {
-    console.log("⚠️ Empty LLM response — fallback");
-    return fallbackStep(step);
-  }
+  await fs.writeFile(filePath, code);
 
-  const code = extractCode(raw);
+  console.log("📝 Test generated:", filePath);
 
-  if (!code.includes("async")) {
-    console.log("⚠️ Invalid code — fallback");
-    return fallbackStep(step);
-  }
-
-  console.log("✅ Step generated");
-
-  return code;
+  return {
+    filePath,
+    code
+  };
 }
