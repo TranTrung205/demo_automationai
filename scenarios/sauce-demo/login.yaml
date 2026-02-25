@@ -1,6 +1,32 @@
-name: Login Scenario
+name: SauceDemo Login
+description: Login with standard user and verify inventory page loads
 
 steps:
-  - instruction: Open saucedemo website
-  - instruction: Login with standard_user and secret_sauce
-  - instruction: Verify inventory page is visible
+
+  - id: open_site
+    description: Open SauceDemo website
+    action: goto
+    target: https://www.saucedemo.com
+
+  - id: fill_username
+    description: Enter username
+    action: fill
+    target: "#user-name"
+    value: standard_user
+
+  - id: fill_password
+    description: Enter password
+    action: fill
+    target: "#password"
+    value: secret_sauce
+
+  - id: click_login
+    description: Click login button
+    action: click
+    target: "#login-button"
+
+  - id: verify_inventory
+    description: Verify inventory page is visible
+    action: assert
+    target: ".inventory_list"
+    expected: visible

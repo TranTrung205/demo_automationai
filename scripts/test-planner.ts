@@ -1,27 +1,56 @@
-import { planSteps } from "../ai/planner/ai-planner.ts";
+import fs from "fs";
+import path from "path";
+import { chromium } from "playwright";
 
-async function main() {
-  try {
-    const instruction = "Login to SauceDemo and verify inventory page";
+import { analyzeUIState } from "../ai/brain/analyzer/ui-state-analyzer";
+import { planSteps } from "../ai/brain/planner/ai-planner";
 
-    const fakeDOM = `
-    Username input
-    Password input
-    Login button
-    Products title
-    `;
+async function testPlanner() {
 
-    const memory = {};
+  const browser = await chromium.launch({
+    headless: false
+  });
 
-    const steps = await planSteps(instruction, fakeDOM, memory);
+  const page = await browser.newPage();
 
-    console.log("===== RESULT =====");
-    console.dir(steps, { depth: null });
+  await page.goto("https://www.saucedemo.com");
 
-  } catch (err) {
-    console.error("❌ ERROR:");
-    console.error(err);
+  const tmpDir = path.join(
+    process.cwd(),
+    "tmp"
+  );
+
+  if (!fs.existsSync(tmpDir)) {
+    fs.mkdirSync(tmpDir);
   }
+
+  const screenshotPath = path.join(
+    tmpDir,
+    "planner.png"
+  );
+
+  await page.screenshot({
+    path: screenshotPath,
+    fullPage: true
+  });
+
+  const dom = await page.content();
+
+  const state = await analyzeUIState(
+    dom,
+    screenshotPath,
+    "Login"
+  );
+
+  const steps = await planSteps(
+    "Login with standard user",
+    state
+  );
+
+  console.log("\n📋 Planner Output:");
+  console.log(JSON.stringify(steps, null, 2));
+
+  await browser.close();
 }
 
-main();
+testPlanner();

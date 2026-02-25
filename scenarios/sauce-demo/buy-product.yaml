@@ -1,10 +1,42 @@
 name: Buy Product
+description: Login and add product to cart then verify cart page
 
 steps:
-  - instruction: Login with standard_user and secret_sauce
-  - instruction: Add Sauce Labs Backpack to cart
-  - instruction: Open cart page
-  - instruction: Click checkout
-  - instruction: Fill checkout information with John Doe
-  - instruction: Finish checkout
-  - instruction: Verify checkout success message
+
+  - id: open_site
+    description: Open SauceDemo website
+    action: goto
+    target: https://www.saucedemo.com
+
+  - id: login_username
+    description: Enter username
+    action: fill
+    target: "#user-name"
+    value: standard_user
+
+  - id: login_password
+    description: Enter password
+    action: fill
+    target: "#password"
+    value: secret_sauce
+
+  - id: login_click
+    description: Click login button
+    action: click
+    target: "#login-button"
+
+  - id: add_product
+    description: Add first product to cart
+    action: click
+    target: ".inventory_item button"
+
+  - id: open_cart
+    description: Open cart page
+    action: click
+    target: ".shopping_cart_link"
+
+  - id: verify_cart
+    description: Verify cart page is visible
+    action: assert
+    target: ".cart_list"
+    expected: visible

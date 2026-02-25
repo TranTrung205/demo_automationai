@@ -1,44 +1,127 @@
 import fs from "fs/promises";
-import path from "path";
-import { TestStep } from "../../brain/planner/step-types";
-import { generateStepsCode } from "./step-generator";
 
-export interface GeneratedTest {
-  filePath: string;
-  code: string;
+interface Step {
+  action: string;
+  target?: string;
+  value?: string;
+  expected?: string;
 }
 
 /**
- * Generate Playwright test file
+ * ============================================
+ * V8 TEST GENERATOR
+ * ============================================
  */
 export async function generateTest(
-  steps: TestStep[],
-  name: string = "ai-test"
-): Promise<GeneratedTest> {
+  steps: Step[],
+  testName: string,
+  url: string = "https://www.saucedemo.com"
+) {
 
-  const stepsCode = generateStepsCode(steps);
+  /**
+   * ============================
+   * SAFE FILE NAME
+   * ============================
+   */
+  const safeName = testName
+    .replace(/\s+/g, "_")
+    .replace(/[^\w\-]/g, "");
 
-  const code = `
+  const dir = "tests/ui";
+
+  await fs.mkdir(dir, { recursive: true });
+
+  const filePath = `${dir}/${safeName}.spec.ts`;
+
+  /**
+   * ============================
+   * TEST TEMPLATE
+   * ============================
+   */
+  let code = `
 import { test, expect } from '@playwright/test';
 
-test('${name}', async ({ page }) => {
+test('${testName}', async ({ page }) => {
 
-${stepsCode}
+  test.setTimeout(60000);
 
+  // ===== AUTO NAVIGATION =====
+  await page.goto('${url}');
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(500);
+
+`;
+
+  /**
+   * ============================
+   * BUILD STEPS
+   * ============================
+   */
+  for (const step of steps) {
+    code += buildStep(step);
+  }
+
+  code += `
 });
 `;
 
-  const filePath = path.join(
-    "tests",
-    `${name}.spec.ts`
-  );
-
+  /**
+   * ============================
+   * WRITE FILE
+   * ============================
+   */
   await fs.writeFile(filePath, code);
 
   console.log("📝 Test generated:", filePath);
 
   return {
-    filePath,
-    code
+    filePath
   };
+}
+
+
+/**
+ * ============================================
+ * STEP BUILDER
+ * ============================================
+ */
+function buildStep(step: Step): string {
+
+  const { action, target, value, expected } = step;
+
+  switch (action) {
+
+    case "goto":
+      return `
+  await page.goto('${target}');
+  await page.waitForLoadState('domcontentloaded');
+`;
+
+    case "click":
+      return `
+  await page.locator("${target}").click();
+`;
+
+    case "fill":
+      return `
+  await page.locator("${target}").fill("${value}");
+`;
+
+    case "assert":
+
+      if (expected === "visible") {
+        return `
+  await expect(page.locator("${target}")).toBeVisible();
+`;
+      }
+
+      return `
+  await expect(page.locator("${target}")).toBeVisible();
+`;
+
+    default:
+      return `
+  // Unknown step: ${action}
+`;
+  }
 }

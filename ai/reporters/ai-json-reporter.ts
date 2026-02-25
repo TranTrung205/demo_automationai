@@ -1,71 +1,95 @@
-import fs from 'fs';
-import path from 'path';
-import {
-  Reporter,
-  TestCase,
-  TestResult
-} from '@playwright/test/reporter';
+import fs from "fs";
+import path from "path";
 
-import { StepTracker } from '../metadata/step-tracker';
-import { detectErrorType } from '../analyzer/error-analyzer';
-
-class AIJsonReporter implements Reporter {
-
-  private results: any[] = [];
-
-  onTestBegin() {
-    StepTracker.reset();
-  }
-
-  onTestEnd(test: TestCase, result: TestResult) {
-
-    const steps = StepTracker.getSteps();
-
-    const errorMessage = result.error?.message || null;
-
-    const errorType = errorMessage
-      ? detectErrorType(errorMessage)
-      : null;
-
-    this.results.push({
-      test: test.title,
-      status: result.status,
-      duration: result.duration,
-
-      error: errorMessage,
-      errorType,
-
-      steps,
-
-      timestamp: Date.now(),
-
-      agent: {
-        version: "V5",
-        framework: "Playwright AI",
-      }
-    });
-
-  }
-
-  async onEnd() {
-
-    const reportDir = path.join(process.cwd(), 'reports');
-
-    if (!fs.existsSync(reportDir)) {
-      fs.mkdirSync(reportDir);
-    }
-
-    const filePath = path.join(reportDir, 'ai-report.json');
-
-    fs.writeFileSync(
-      filePath,
-      JSON.stringify(this.results, null, 2)
-    );
-
-    console.log('✅ AI Dataset Generated:', filePath);
-
-  }
-
+export interface AIStepLog {
+  id: string;
+  description: string;
+  action: string;
+  target: string;
+  value?: string;
+  status: "passed" | "failed";
+  error?: string;
+  timestamp: number;
 }
 
-export default AIJsonReporter;
+export interface AIReport {
+  testName: string;
+  startedAt: number;
+  finishedAt: number;
+  durationMs: number;
+  success: boolean;
+  steps: AIStepLog[];
+  metadata?: any;
+}
+
+const REPORT_DIR = path.join(process.cwd(), "ai-report");
+
+/**
+ * Ensure report folder exists
+ */
+function ensureDir() {
+  if (!fs.existsSync(REPORT_DIR)) {
+    fs.mkdirSync(REPORT_DIR, { recursive: true });
+  }
+}
+
+/**
+ * Save AI report JSON
+ */
+export function saveAIReport(report: AIReport) {
+
+  ensureDir();
+
+  const fileName =
+    report.testName.replace(/\s+/g, "_") +
+    "_" +
+    Date.now() +
+    ".json";
+
+  const filePath = path.join(REPORT_DIR, fileName);
+
+  fs.writeFileSync(
+    filePath,
+    JSON.stringify(report, null, 2)
+  );
+
+  console.log("📊 AI Report saved:", filePath);
+}
+
+/**
+ * Create empty report
+ */
+export function createReport(testName: string): AIReport {
+
+  return {
+    testName,
+    startedAt: Date.now(),
+    finishedAt: 0,
+    durationMs: 0,
+    success: false,
+    steps: [],
+    metadata: {}
+  };
+}
+
+/**
+ * Finalize report
+ */
+export function finalizeReport(report: AIReport, success: boolean) {
+
+  report.finishedAt = Date.now();
+  report.durationMs =
+    report.finishedAt - report.startedAt;
+
+  report.success = success;
+}
+
+/**
+ * Push step log into report
+ */
+export function logStep(
+  report: AIReport,
+  step: AIStepLog
+) {
+  report.steps.push(step);
+}

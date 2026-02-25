@@ -1,56 +1,72 @@
-import { Page } from "playwright";
+import { Page } from "@playwright/test";
 
-export async function scanDOM(page: Page) {
 
-  if (!page) {
-    console.error("❌ scanDOM: page undefined");
-    return [];
-  }
+export interface ElementInfo {
+  tag: string;
+  text: string;
+  id?: string;
+  class?: string;
+  placeholder?: string;
+  name?: string;
+  role?: string;
+}
 
-  try {
 
-    await page.waitForLoadState("domcontentloaded");
+export interface ScanResult {
+  url: string;
+  title: string;
+  elements: ElementInfo[];
+}
 
-    const jsCode = `
-      (() => {
 
-        function getSelector(el) {
+/**
+ * Extract visible UI elements from page
+ * Optimized for LLM consumption
+ */
+export async function scanDOM(
+  page: Page
+): Promise<ScanResult> {
 
-          if (el.id) return "#" + el.id;
+  const result = await page.evaluate(() => {
 
-          if (el.className)
-            return el.tagName.toLowerCase() + "." +
-              el.className.toString().replace(/\\s+/g, ".");
+    function getText(el: Element): string {
+      return (el.textContent || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .slice(0, 120);
+    }
 
-          return el.tagName.toLowerCase();
-        }
+    const nodes = Array.from(
+      document.querySelectorAll(
+        "button, input, a, select, textarea, [role='button']"
+      )
+    );
 
-        const elements = Array.from(
-          document.querySelectorAll("input,button,a,select")
-        );
+    const elements = nodes.map((el: any) => ({
 
-        return elements.map(el => ({
-          tag: el.tagName,
-          text: el.innerText || "",
-          placeholder: el.placeholder || "",
-          id: el.id || "",
-          class: el.className || "",
-          selector: getSelector(el)
-        }));
+      tag: el.tagName?.toLowerCase(),
 
-      })();
-    `;
+      text: getText(el),
 
-    const dom: any[] = await page.evaluate(jsCode);
+      id: el.id || "",
 
-    console.log("✅ DOM scanned:", dom?.length || 0, "elements");
+      class: el.className || "",
 
-    return dom || [];
+      placeholder: el.placeholder || "",
 
-  } catch (err) {
+      name: el.name || "",
 
-    console.error("❌ DOM scan error:", err);
+      role: el.getAttribute?.("role") || ""
 
-    return [];
-  }
+    }));
+
+    return {
+      url: location.href,
+      title: document.title,
+      elements
+    };
+
+  });
+
+  return result;
 }
