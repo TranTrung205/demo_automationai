@@ -1,36 +1,146 @@
 import { Page } from "@playwright/test";
 import { TestStep } from "../../brain/planner/step-types";
+import { healAndRetry } from "../healer/healer";
+import { rememberSuccess, rememberFailure } from "../../brain/planner/planner-memory";
 
 export async function executeStep(
   page: Page,
-  step: TestStep
+  step: TestStep,
+  uiState?: any,
+  uiFile?: any
 ) {
 
   console.log(`👉 ${step.description}`);
 
+  try {
+
+    await runAction(page, step);
+
+    // ✅ nhớ step thành công
+    rememberSuccess(step);
+
+  } catch (error) {
+
+    console.log("❌ Step failed:", step.target);
+
+    rememberFailure(step.target);
+
+    // ❗ nếu không có context healer → fail ngay
+    if (!uiState || !uiFile) {
+      console.log("⚠️ No healer context provided");
+      throw error;
+    }
+
+    const healed = await healAndRetry(
+      page,
+      step.target,
+      step.action,
+      step.value,
+      uiState,
+      uiFile
+    );
+
+    if (!healed) {
+      console.log("💥 Healing failed");
+      throw error;
+    }
+
+    console.log("✅ Healed successfully, continuing...");
+  }
+}
+
+async function runAction(page: Page, step: TestStep) {
+
+  const timeout = step.timeout || 5000;
+
   switch (step.action) {
 
     case "goto":
-      await page.goto(step.target);
+      await page.goto(step.target, { timeout });
       break;
 
     case "click":
-      await page.locator(step.target).click();
+      await page.locator(step.target).click({ timeout });
       break;
 
     case "fill":
-      await page.locator(step.target).fill(step.value || "");
+      await page.locator(step.target).fill(step.value || "", { timeout });
       break;
 
-    case "assert":
-      await page.waitForSelector(step.target);
+    case "select":
+      await page.locator(step.target).selectOption(step.value || "");
+      break;
+
+    case "hover":
+      await page.locator(step.target).hover({ timeout });
+      break;
+
+    case "press":
+      await page.locator(step.target).press(step.value || "");
       break;
 
     case "wait":
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(step.timeout || 1000);
+      break;
+
+    case "assert":
+      await handleAssertion(page, step, timeout);
+      break;
+
+    case "unknown":
+      console.log("⚠️ Unknown action:", step.action);
       break;
 
     default:
-      console.log("⚠️ Unknown action:", step.action);
+      console.log("⚠️ Unsupported action:", step.action);
   }
+}
+
+async function handleAssertion(
+  page: Page,
+  step: TestStep,
+  timeout: number
+) {
+
+  if (!step.expected) {
+    await page.waitForSelector(step.target, { timeout });
+    return;
+  }
+
+  if (step.expected === "visible") {
+    await page.waitForSelector(step.target, {
+      state: "visible",
+      timeout
+    });
+    return;
+  }
+
+  if (step.expected === "hidden") {
+    await page.waitForSelector(step.target, {
+      state: "hidden",
+      timeout
+    });
+    return;
+  }
+
+  if (step.expected.startsWith("contains:")) {
+    const expectedText = step.expected.replace("contains:", "");
+
+    const locator = page.locator(step.target);
+
+    await locator.waitFor({ timeout });
+
+    const text = await locator.textContent();
+
+    if (!text?.includes(expectedText)) {
+      throw new Error(
+        `Assertion failed: "${text}" does not contain "${expectedText}"`
+      );
+    }
+
+    return;
+  }
+
+  // fallback
+  await page.waitForSelector(step.target, { timeout });
 }

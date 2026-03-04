@@ -9,7 +9,7 @@
 
 import { BasePage } from './basePage';
 import { Page } from '@playwright/test';
-import { CheckoutFormComponent } from '../components/checkoutForm.component';
+import { CheckoutFormComponent } from '../../components/checkoutForm.component';
 
 export class CheckoutPage extends BasePage {
   form: CheckoutFormComponent;

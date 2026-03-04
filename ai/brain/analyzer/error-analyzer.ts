@@ -1,123 +1,89 @@
-/**
- * Error types used across the agent
- */
-export type ErrorType =
-  | "timeout"
-  | "locator"
-  | "assertion"
-  | "navigation"
-  | "dom"
-  | "network"
-  | "unknown";
+// ai/brain/analyzer/error-analyzer.ts
+
+export type ErrorCategory =
+  | "SELECTOR_NOT_FOUND"
+  | "TIMEOUT"
+  | "NAVIGATION_ERROR"
+  | "ASSERTION_FAILED"
+  | "NETWORK_ERROR"
+  | "UNKNOWN";
 
 export interface ErrorAnalysis {
-  type: ErrorType;
-  message: string;
-  severity: "low" | "medium" | "high";
-  hint?: string;
+  category: ErrorCategory;
+  recoverable: boolean;
+  suggestedAction: "HEAL" | "RETRY" | "REPLAN" | "ABORT";
+  confidence: number; // 0-100
+  rootCause?: string;
 }
 
-/**
- * Detect Playwright error type from logs
- * V8 version: richer analysis for healing + vision support
- */
-export function detectErrorType(log: string): ErrorAnalysis {
+export function analyzeError(error: unknown): ErrorAnalysis {
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
 
-  if (!log) {
+  // Selector issues
+  if (
+    message.includes("locator") ||
+    message.includes("selector") ||
+    message.includes("not found")
+  ) {
     return {
-      type: "unknown",
-      message: "",
-      severity: "low"
+      category: "SELECTOR_NOT_FOUND",
+      recoverable: true,
+      suggestedAction: "HEAL",
+      confidence: 90,
+      rootCause: "Element selector likely changed",
     };
   }
-
-  const text = log.toLowerCase();
 
   // Timeout
-  if (text.includes("timeout")) {
+  if (message.includes("timeout")) {
     return {
-      type: "timeout",
-      message: log,
-      severity: "medium",
-      hint: "Element may not be visible yet or page still loading"
-    };
-  }
-
-  // Locator / selector issues
-  if (
-    text.includes("locator") ||
-    text.includes("selector") ||
-    text.includes("not found") ||
-    text.includes("strict mode violation")
-  ) {
-    return {
-      type: "locator",
-      message: log,
-      severity: "high",
-      hint: "Selector may be incorrect or UI changed"
-    };
-  }
-
-  // Assertion failures
-  if (
-    text.includes("expect") ||
-    text.includes("assert") ||
-    text.includes("tohave") ||
-    text.includes("received")
-  ) {
-    return {
-      type: "assertion",
-      message: log,
-      severity: "medium",
-      hint: "Expected UI state not matching actual state"
+      category: "TIMEOUT",
+      recoverable: true,
+      suggestedAction: "RETRY",
+      confidence: 85,
+      rootCause: "Element slow render or async issue",
     };
   }
 
   // Navigation
-  if (
-    text.includes("navigation") ||
-    text.includes("net::err") ||
-    text.includes("failed to load")
-  ) {
+  if (message.includes("navigation") || message.includes("net::")) {
     return {
-      type: "navigation",
-      message: log,
-      severity: "high",
-      hint: "Page navigation failed or URL incorrect"
+      category: "NAVIGATION_ERROR",
+      recoverable: true,
+      suggestedAction: "REPLAN",
+      confidence: 80,
+      rootCause: "Unexpected route change or redirect",
     };
   }
 
-  // DOM detached / stale element
-  if (
-    text.includes("detached") ||
-    text.includes("stale") ||
-    text.includes("element is not attached")
-  ) {
+  // Assertion
+  if (message.includes("expect") || message.includes("assert")) {
     return {
-      type: "dom",
-      message: log,
-      severity: "medium",
-      hint: "DOM updated and element reference lost"
+      category: "ASSERTION_FAILED",
+      recoverable: false,
+      suggestedAction: "REPLAN",
+      confidence: 75,
+      rootCause: "UI state does not match expected condition",
     };
   }
 
   // Network
-  if (
-    text.includes("network") ||
-    text.includes("fetch") ||
-    text.includes("connection")
-  ) {
+  if (message.includes("network")) {
     return {
-      type: "network",
-      message: log,
-      severity: "high",
-      hint: "Network request failed"
+      category: "NETWORK_ERROR",
+      recoverable: true,
+      suggestedAction: "RETRY",
+      confidence: 70,
+      rootCause: "Backend/API instability",
     };
   }
 
   return {
-    type: "unknown",
-    message: log,
-    severity: "low"
+    category: "UNKNOWN",
+    recoverable: false,
+    suggestedAction: "ABORT",
+    confidence: 40,
+    rootCause: "Unclassified execution failure",
   };
 }

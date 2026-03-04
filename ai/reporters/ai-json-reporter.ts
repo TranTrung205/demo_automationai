@@ -7,35 +7,43 @@ export interface AIStepLog {
   action: string;
   target: string;
   value?: string;
-  status: "passed" | "failed";
+
+  status: "passed" | "failed" | "healed";
+
   error?: string;
+  retryCount?: number;
+  confidence?: number;
+
   timestamp: number;
 }
 
 export interface AIReport {
+  runId: string;
   testName: string;
+
   startedAt: number;
   finishedAt: number;
   durationMs: number;
+
   success: boolean;
+
   steps: AIStepLog[];
-  metadata?: any;
+
+  metadata?: {
+    model?: string;
+    visionEnabled?: boolean;
+    plannerVersion?: string;
+  };
 }
 
 const REPORT_DIR = path.join(process.cwd(), "ai-report");
 
-/**
- * Ensure report folder exists
- */
 function ensureDir() {
   if (!fs.existsSync(REPORT_DIR)) {
     fs.mkdirSync(REPORT_DIR, { recursive: true });
   }
 }
 
-/**
- * Save AI report JSON
- */
 export function saveAIReport(report: AIReport) {
 
   ensureDir();
@@ -43,7 +51,7 @@ export function saveAIReport(report: AIReport) {
   const fileName =
     report.testName.replace(/\s+/g, "_") +
     "_" +
-    Date.now() +
+    report.runId +
     ".json";
 
   const filePath = path.join(REPORT_DIR, fileName);
@@ -56,26 +64,26 @@ export function saveAIReport(report: AIReport) {
   console.log("📊 AI Report saved:", filePath);
 }
 
-/**
- * Create empty report
- */
 export function createReport(testName: string): AIReport {
 
   return {
+    runId: Date.now().toString(),
     testName,
     startedAt: Date.now(),
     finishedAt: 0,
     durationMs: 0,
     success: false,
     steps: [],
-    metadata: {}
+    metadata: {
+      plannerVersion: "v10"
+    }
   };
 }
 
-/**
- * Finalize report
- */
-export function finalizeReport(report: AIReport, success: boolean) {
+export function finalizeReport(
+  report: AIReport,
+  success: boolean
+) {
 
   report.finishedAt = Date.now();
   report.durationMs =
@@ -84,9 +92,6 @@ export function finalizeReport(report: AIReport, success: boolean) {
   report.success = success;
 }
 
-/**
- * Push step log into report
- */
 export function logStep(
   report: AIReport,
   step: AIStepLog

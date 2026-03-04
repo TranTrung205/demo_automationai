@@ -12,6 +12,13 @@ export type StepAction =
   | "press"
   | "unknown";
 
+/**
+ * Structured assertion types
+ */
+export type AssertionType =
+  | "visible"
+  | "hidden"
+  | `contains:${string}`;
 
 /**
  * Core test step definition
@@ -28,7 +35,7 @@ export interface TestStep {
 
   value?: string;
 
-  expected?: string;
+  expected?: AssertionType;
 
   timeout?: number;
 

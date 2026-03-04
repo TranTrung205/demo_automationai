@@ -1,23 +1,52 @@
-import fs from "fs";
-import path from "path";
+export interface MemoryRecord {
 
-const FILE = path.join(process.cwd(), "memory.json");
+  id: string;
 
-export function loadMemory(): any {
+  type: "locator" | "healing" | "planner" | "vision";
 
-  if (!fs.existsSync(FILE)) {
-    return {};
-  }
+  key: string;
 
-  return JSON.parse(
-    fs.readFileSync(FILE, "utf-8")
-  );
+  value: any;
+
+  confidence: number;
+
+  createdAt: number;
+
+  usageCount: number;
 }
 
-export function saveMemory(data: any) {
+const memoryStore: MemoryRecord[] = [];
 
-  fs.writeFileSync(
-    FILE,
-    JSON.stringify(data, null, 2)
-  );
+/**
+ * Save new memory
+ */
+export function saveMemory(record: Omit<MemoryRecord, "id" | "createdAt" | "usageCount">) {
+
+  memoryStore.push({
+    ...record,
+    id: Date.now().toString(),
+    createdAt: Date.now(),
+    usageCount: 0
+  });
+}
+
+/**
+ * Retrieve memory by key
+ */
+export function getMemory(key: string): MemoryRecord | undefined {
+
+  const found = memoryStore.find(m => m.key === key);
+
+  if (found) {
+    found.usageCount++;
+  }
+
+  return found;
+}
+
+/**
+ * Get all memory
+ */
+export function getAllMemory(): MemoryRecord[] {
+  return memoryStore;
 }

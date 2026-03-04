@@ -3,81 +3,64 @@ import path from "path";
 import yaml from "yaml";
 import readline from "readline";
 
-import { runAgentV8 } from "../ai/orchestrator/orchestrator-v8";
+import { runV10 } from "../ai/orchestrator/orchestrator-v10";
 
 /**
  * =====================================
- * SCAN SCENARIOS RECURSIVE
+ * SCAN SCENARIOS
  * =====================================
  */
 function scanScenarios(dir: string): string[] {
-
   const results: string[] = [];
 
   function scan(current: string) {
-
     const files = fs.readdirSync(current);
 
     for (const file of files) {
-
       const fullPath = path.join(current, file);
       const stat = fs.statSync(fullPath);
 
       if (stat.isDirectory()) {
         scan(fullPath);
-      }
-      else if (file.endsWith(".yaml") || file.endsWith(".yml")) {
+      } else if (file.endsWith(".yaml") || file.endsWith(".yml")) {
         results.push(fullPath);
       }
     }
   }
 
   scan(dir);
-
   return results;
 }
 
-
 /**
  * =====================================
- * CLI SELECT SCENARIO
+ * CLI SELECT
  * =====================================
  */
 async function chooseScenario(paths: string[]): Promise<string> {
-
-  console.log("");
-  console.log("📂 Available scenarios:");
-  console.log("");
+  console.log("\n📂 Available scenarios:\n");
 
   paths.forEach((p, i) => {
     console.log(`  ${i + 1}. ${p}`);
   });
 
-  console.log("");
-
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
   });
 
-  const index: number = await new Promise(resolve => {
-
-    rl.question("👉 Select scenario number: ", answer => {
+  const index: number = await new Promise((resolve) => {
+    rl.question("\n👉 Select scenario number: ", (answer) => {
       rl.close();
       resolve(Number(answer));
     });
-
   });
 
   const selected = paths[index - 1];
-
-  if (!selected) {
-    throw new Error("Invalid selection");
-  }
+  if (!selected) throw new Error("Invalid selection");
 
   return selected;
 }
-
 
 /**
  * =====================================
@@ -85,25 +68,14 @@ async function chooseScenario(paths: string[]): Promise<string> {
  * =====================================
  */
 async function main() {
-
-  /**
-   * CLI ARG
-   * --scenario=path
-   */
   const args = process.argv.slice(2);
-  const scenarioArg = args.find(a => a.startsWith("--scenario="));
+  const scenarioArg = args.find((a) => a.startsWith("--scenario="));
 
   let scenarioPath: string;
 
   if (scenarioArg) {
-
     scenarioPath = scenarioArg.split("=")[1];
-
   } else {
-
-    /**
-     * AUTO SCAN MODE
-     */
     const scenarioDir = path.resolve("scenarios");
 
     if (!fs.existsSync(scenarioDir)) {
@@ -112,7 +84,7 @@ async function main() {
 
     const files = scanScenarios(scenarioDir);
 
-    if (files.length === 0) {
+    if (!files.length) {
       throw new Error("❌ No scenarios found");
     }
 
@@ -124,32 +96,27 @@ async function main() {
   const file = fs.readFileSync(scenarioPath, "utf-8");
   const scenario = yaml.parse(file);
 
-  const instruction =
-    scenario.description ||
-    scenario.name ||
-    "Run test";
-
+  const steps = scenario.steps || [];
   const url =
-    scenario.steps?.find((s: any) => s.action === "goto")?.target ||
+    steps.find((s: any) => s.action === "goto")?.target ||
     "https://www.saucedemo.com";
 
+  const uiState = {
+    elements: steps.map((s: any) => ({
+      selector: s.target || "body",
+    })),
+  };
+
   try {
+    const result = await runV10(
+      uiState,
+      steps,
+      scenario.name || "ai_test",
+      url
+    );
 
-    const result = await runAgentV8({
-
-      instruction,
-      url,
-      testName: scenario.name || "ai-test",
-      headless: false,
-      maxRetry: 2
-
-    });
-
-    console.log("\n🎯 RESULT:", result.success);
-
-  }
-  catch (err) {
-
+    console.log("\n🎯 Generation completed:", result);
+  } catch (err) {
     console.error("❌ Agent crashed:", err);
   }
 }

@@ -1,57 +1,43 @@
-import { analyzeVision, VisionResult } from "./vision-analyzer";
+// ai/brain/analyzer/ui-state-analyzer.ts
+
+import { Page } from "@playwright/test";
 
 export interface UIState {
-  domSummary: string;
-  vision?: VisionResult | null;
-
-  pageType?: string;
-  confidence?: number;
-
-  timestamp: number;
+  url: string;
+  title: string;
+  hasModal: boolean;
+  hasErrorBanner: boolean;
+  hasLoader: boolean;
+  domHash: string;
 }
 
-/**
- * Merge DOM + Vision into unified UI state
- * Used by planner, evaluator, healer
- */
-export async function analyzeUIState(
-  domSummary: string,
-  screenshotPath?: string,
-  instruction?: string
-): Promise<UIState> {
-
-  let vision: VisionResult | null = null;
-  let pageType = "unknown";
-  let confidence = 0.5;
-
-  try {
-
-    if (screenshotPath) {
-      vision = await analyzeVision(
-        screenshotPath,
-        instruction || ""
-      );
-
-      if (vision?.pageType) {
-        pageType = vision.pageType;
-        confidence = 0.9;
-      }
-    }
-
-  } catch (err) {
-
-    console.warn("⚠️ Vision analysis failed:", err);
-
-    vision = null;
-    pageType = "unknown";
-    confidence = 0.3;
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
   }
+  return hash.toString();
+}
+
+export async function analyzeUIState(page: Page): Promise<UIState> {
+  const url = page.url();
+  const title = await page.title();
+
+  const html = await page.content();
+
+  const hasModal = html.includes("modal");
+  const hasErrorBanner =
+    html.includes("error") || html.includes("alert") || html.includes("invalid");
+  const hasLoader =
+    html.includes("spinner") || html.includes("loading");
 
   return {
-    domSummary,
-    vision,
-    pageType,
-    confidence,
-    timestamp: Date.now()
+    url,
+    title,
+    hasModal,
+    hasErrorBanner,
+    hasLoader,
+    domHash: simpleHash(html),
   };
 }

@@ -1,72 +1,40 @@
 import { Page } from "@playwright/test";
 
-
-export interface ElementInfo {
+export interface DOMElementInfo {
   tag: string;
-  text: string;
   id?: string;
-  class?: string;
-  placeholder?: string;
-  name?: string;
+  classes?: string[];
+  text?: string;
   role?: string;
+  name?: string;
 }
 
-
-export interface ScanResult {
+export interface DOMSnapshot {
   url: string;
   title: string;
-  elements: ElementInfo[];
+  elements: DOMElementInfo[];
 }
 
+export async function scanDOM(page: Page): Promise<DOMSnapshot> {
 
-/**
- * Extract visible UI elements from page
- * Optimized for LLM consumption
- */
-export async function scanDOM(
-  page: Page
-): Promise<ScanResult> {
+  const snapshot = await page.evaluate(() => {
 
-  const result = await page.evaluate(() => {
-
-    function getText(el: Element): string {
-      return (el.textContent || "")
-        .trim()
-        .replace(/\s+/g, " ")
-        .slice(0, 120);
-    }
-
-    const nodes = Array.from(
-      document.querySelectorAll(
-        "button, input, a, select, textarea, [role='button']"
-      )
-    );
-
-    const elements = nodes.map((el: any) => ({
-
-      tag: el.tagName?.toLowerCase(),
-
-      text: getText(el),
-
-      id: el.id || "",
-
-      class: el.className || "",
-
-      placeholder: el.placeholder || "",
-
-      name: el.name || "",
-
-      role: el.getAttribute?.("role") || ""
-
-    }));
+    const elements = Array.from(document.querySelectorAll("button, input, a, select"));
 
     return {
-      url: location.href,
+      url: window.location.href,
       title: document.title,
-      elements
+      elements: elements.map(el => ({
+        tag: el.tagName.toLowerCase(),
+        id: el.id || undefined,
+        classes: el.className ? el.className.split(" ") : undefined,
+        text: el.textContent?.trim() || undefined,
+        role: el.getAttribute("role") || undefined,
+        name: el.getAttribute("name") || undefined
+      }))
     };
 
   });
 
-  return result;
+  return snapshot;
 }

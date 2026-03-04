@@ -1,26 +1,41 @@
-import { chromium, Browser, Page } from "playwright";
+export interface AISession {
 
-let browser: Browser | null = null;
-let page: Page | null = null;
+  sessionId: string;
 
-export async function getSession() {
+  currentTest?: string;
 
-  if (!browser) {
-    browser = await chromium.launch({ headless: false });
-  }
+  retryCount: number;
 
-  if (!page) {
-    const context = await browser.newContext();
-    page = await context.newPage();
-  }
+  startedAt: number;
 
-  return { browser, page };
+  model?: string;
 }
 
-export async function closeSession() {
-  if (browser) {
-    await browser.close();
-    browser = null;
-    page = null;
+let currentSession: AISession | null = null;
+
+export function startSession(testName: string, model?: string): AISession {
+
+  currentSession = {
+    sessionId: Date.now().toString(),
+    currentTest: testName,
+    retryCount: 0,
+    startedAt: Date.now(),
+    model
+  };
+
+  return currentSession;
+}
+
+export function getSession(): AISession | null {
+  return currentSession;
+}
+
+export function incrementRetry() {
+  if (currentSession) {
+    currentSession.retryCount++;
   }
+}
+
+export function endSession() {
+  currentSession = null;
 }

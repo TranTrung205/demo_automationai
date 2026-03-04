@@ -6,11 +6,12 @@ export interface OllamaOptions {
   model?: string;
 }
 
+interface OllamaResponse {
+  response: string;
+}
+
 const DEFAULT_MODEL = "phi3";
 
-/**
- * Call Ollama LLM
- */
 export async function ollamaChat(
   prompt: string,
   options: OllamaOptions = {}
@@ -42,9 +43,9 @@ export async function ollamaChat(
         })
       });
 
-      const data = await res.json();
+      const data = await res.json() as OllamaResponse;
 
-      if (!data?.response) {
+      if (!data.response) {
         throw new Error("Empty LLM response");
       }
 

@@ -15,8 +15,8 @@
 
 import { BasePage } from './basePage';
 import { Page } from '@playwright/test';
-import { HeaderComponent } from '../components/header.component';
-import { CartItemComponent } from '../components/cartItem.component';
+import { HeaderComponent } from '../../components/header.component';
+import { CartItemComponent } from '../../components/cartItem.component';
 
 export class CartPage extends BasePage {
 

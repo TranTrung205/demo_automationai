@@ -10,8 +10,8 @@
 
 import { BasePage } from './basePage';
 import { Page } from '@playwright/test';
-import { HeaderComponent } from '../components/header.component';
-import { InventoryItemComponent } from '../components/inventoryItem.component';
+import { HeaderComponent } from '../../components/header.component';
+import { InventoryItemComponent } from '../../components/inventoryItem.component';
 
 export class InventoryPage extends BasePage {
   header: HeaderComponent;
