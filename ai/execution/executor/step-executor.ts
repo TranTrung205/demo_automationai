@@ -10,22 +10,20 @@ export async function executeStep(
   uiFile?: any
 ) {
 
-  console.log(`👉 ${step.description}`);
+  console.log(`👉 ${step.id || step.action} → ${step.target}`);
 
   try {
 
     await runAction(page, step);
 
-    // ✅ nhớ step thành công
     rememberSuccess(step);
 
   } catch (error) {
 
     console.log("❌ Step failed:", step.target);
 
-    rememberFailure(step.target);
+    rememberFailure(step.id || step.target);
 
-    // ❗ nếu không có context healer → fail ngay
     if (!uiState || !uiFile) {
       console.log("⚠️ No healer context provided");
       throw error;
@@ -48,6 +46,12 @@ export async function executeStep(
     console.log("✅ Healed successfully, continuing...");
   }
 }
+
+/**
+ * =====================================
+ * RUN ACTION
+ * =====================================
+ */
 
 async function runAction(page: Page, step: TestStep) {
 
@@ -84,63 +88,10 @@ async function runAction(page: Page, step: TestStep) {
       break;
 
     case "assert":
-      await handleAssertion(page, step, timeout);
-      break;
-
-    case "unknown":
-      console.log("⚠️ Unknown action:", step.action);
+      await page.waitForSelector(step.target, { timeout });
       break;
 
     default:
       console.log("⚠️ Unsupported action:", step.action);
   }
-}
-
-async function handleAssertion(
-  page: Page,
-  step: TestStep,
-  timeout: number
-) {
-
-  if (!step.expected) {
-    await page.waitForSelector(step.target, { timeout });
-    return;
-  }
-
-  if (step.expected === "visible") {
-    await page.waitForSelector(step.target, {
-      state: "visible",
-      timeout
-    });
-    return;
-  }
-
-  if (step.expected === "hidden") {
-    await page.waitForSelector(step.target, {
-      state: "hidden",
-      timeout
-    });
-    return;
-  }
-
-  if (step.expected.startsWith("contains:")) {
-    const expectedText = step.expected.replace("contains:", "");
-
-    const locator = page.locator(step.target);
-
-    await locator.waitFor({ timeout });
-
-    const text = await locator.textContent();
-
-    if (!text?.includes(expectedText)) {
-      throw new Error(
-        `Assertion failed: "${text}" does not contain "${expectedText}"`
-      );
-    }
-
-    return;
-  }
-
-  // fallback
-  await page.waitForSelector(step.target, { timeout });
 }

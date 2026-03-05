@@ -1,116 +1,81 @@
-import type { Page } from "@playwright/test";
-import type { TestStep } from "../../brain/planner/step-types";
+import { Page } from "@playwright/test";
 
-/**
- * ===============================
- * RUNTIME HEALING (Playwright level)
- * ===============================
- */
+export async function healLocator(
+  page: Page,
+  element: any
+): Promise<string | null> {
 
-type UIElement = {
-  selector: string;
-  type?: string;
-};
+  console.log("🧠 AI attempting locator healing...");
 
-type UIFile = {
-  pageName: string;
-  elements: Record<string, UIElement>;
-};
+  const nodes = await page.locator("*").all();
+
+  for (const node of nodes) {
+
+    const text = await node.innerText().catch(() => "");
+
+    if (!text) continue;
+
+    if (
+      element?.description &&
+      text.toLowerCase().includes(
+        element.description.toLowerCase()
+      )
+    ) {
+
+      const selector = await node.evaluate(el => {
+
+        if (el.id) return `#${el.id}`;
+
+        if (el.className)
+          return "." + el.className.split(" ")[0];
+
+        return el.tagName.toLowerCase();
+      });
+
+      console.log("✨ healed locator:", selector);
+
+      return selector;
+    }
+  }
+
+  return null;
+}
 
 export async function healAndRetry(
   page: Page,
-  failedSelector: string,
+  target: string,
   action: string,
   value: string | undefined,
   uiState: any,
-  uiFile: UIFile
+  uiFile: any
 ): Promise<boolean> {
 
-  const candidates = uiState?.elements || [];
+  const element = uiFile?.elements?.[target];
 
-  const match = candidates.find(
-    (el: any) =>
-      el.selector !== failedSelector &&
-      el.type === inferTypeFromAction(action)
-  );
+  if (!element) {
+    console.log("⚠️ Cannot find element in UI map:", target);
+    return false;
+  }
 
-  if (!match) return false;
+  const healedSelector = await healLocator(page, element);
+
+  if (!healedSelector) return false;
+
+  console.log("🔁 Retrying with healed selector:", healedSelector);
 
   try {
-    await executeAction(page, action, match.selector, value);
 
-    Object.keys(uiFile.elements).forEach((key) => {
-      if (uiFile.elements[key].selector === failedSelector) {
-        uiFile.elements[key].selector = match.selector;
-      }
-    });
+    if (action === "click") {
+      await page.locator(healedSelector).click();
+    }
+
+    if (action === "fill") {
+      await page.locator(healedSelector).fill(value || "");
+    }
 
     return true;
 
   } catch {
     return false;
-  }
-}
-
-/**
- * ===============================
- * STRATEGIC HEALING (AI level)
- * ===============================
- */
-
-export function healSteps(
-  steps: TestStep[],
-  errorOutput: string
-): { healed: boolean; steps: TestStep[] } {
-
-  let healed = false;
-
-  const updatedSteps: TestStep[] = steps.map(step => {
-
-    if (errorOutput.includes(step.target)) {
-      healed = true;
-
-      return {
-        ...step,
-        target: step.target.replace("button", "btn"),
-        meta: {
-          ...step.meta,
-          source: "healer"
-        }
-      };
-    }
-
-    return step;
-  });
-
-  return { healed, steps: updatedSteps };
-}
-
-/**
- * Helpers
- */
-
-function inferTypeFromAction(action: string) {
-  if (action === "click") return "button";
-  if (action === "fill") return "input";
-  return "unknown";
-}
-
-async function executeAction(
-  page: Page,
-  action: string,
-  selector: string,
-  value?: string
-) {
-  switch (action) {
-    case "click":
-      await page.click(selector);
-      break;
-    case "fill":
-      await page.fill(selector, value || "");
-      break;
-    case "assert":
-      await page.waitForSelector(selector, { state: "visible" });
-      break;
   }
 }

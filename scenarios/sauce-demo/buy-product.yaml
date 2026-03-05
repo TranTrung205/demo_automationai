@@ -6,37 +6,51 @@ steps:
   - id: open_site
     description: Open SauceDemo website
     action: goto
-    target: https://www.saucedemo.com
+    target:
+      name: site
+      locator: "https://www.saucedemo.com"
 
   - id: login_username
     description: Enter username
     action: fill
-    target: "#user-name"
+    target:
+      name: username
+      locator: "#user-name"
     value: standard_user
 
   - id: login_password
     description: Enter password
     action: fill
-    target: "#password"
+    target:
+      name: password
+      locator: "#password"
     value: secret_sauce
 
   - id: login_click
     description: Click login button
     action: click
-    target: "#login-button"
+    target:
+      name: loginButton
+      locator: "#login-button"
 
   - id: add_product
     description: Add first product to cart
     action: click
-    target: ".inventory_item button"
+    target:
+      name: addToCartButton
+      locator: ".inventory_item button"
 
   - id: open_cart
     description: Open cart page
     action: click
-    target: ".shopping_cart_link"
+    target:
+      name: cartLink
+      locator: ".shopping_cart_link"
 
   - id: verify_cart
     description: Verify cart page is visible
     action: assert
-    target: ".cart_list"
+    target:
+      name: cartList
+      locator: ".cart_list"
     expected: visible

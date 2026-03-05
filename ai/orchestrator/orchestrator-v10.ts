@@ -6,33 +6,62 @@ import { generateTest } from "../execution/generator/test/test-generator";
 export async function runV10(
   uiState: any,
   steps: any[],
-  testName: string,
+  scenarioName: string,
   url: string
 ) {
+
   console.log("🚀 V10 Orchestrator Started");
 
-  if (!uiState?.elements?.length) {
-    throw new Error("Invalid UI state");
+  /**
+   * Ensure steps
+   */
+  if (!Array.isArray(steps)) {
+    throw new Error("❌ Steps must be an array");
   }
 
-  console.log("📦 Elements detected:", uiState.elements.length);
+  /**
+   * Ensure elements
+   */
+  if (!uiState || !uiState.elements) {
+    throw new Error("❌ uiState.elements missing");
+  }
 
-  // 1️⃣ Base
+  const elements = Array.isArray(uiState.elements)
+    ? uiState.elements
+    : Object.values(uiState.elements);
+
+  console.log("📦 Elements detected:", elements.length);
+
+  /**
+   * Normalize names
+   */
+  const pageName = scenarioName.replace(/\s+/g, "");
+  const testName = pageName;
+
+  /**
+   * 1️⃣ Generate BasePage
+   */
   await generateBasePageIfNotExists();
 
-  // 2️⃣ UI abstraction
-  await generateUI(uiState, testName);
+  /**
+   * 2️⃣ Generate UI
+   */
+  await generateUI(pageName, elements);
 
-  // 3️⃣ Page Object
-  await generatePageObject(testName);
+  /**
+   * 3️⃣ Generate Page Object
+   */
+  await generatePageObject(pageName);
 
-  // 4️⃣ Test
-  const result = await generateTest(
-    steps,
-    testName
-  );
+  /**
+   * 4️⃣ Generate Test
+   */
+  await generateTest(testName, pageName, steps);
 
-  console.log("✅ V10 Generation Completed");
-
-  return result;
+  return {
+    page: pageName,
+    test: testName,
+    elements: elements.length,
+    url
+  };
 }

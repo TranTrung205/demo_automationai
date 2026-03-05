@@ -9,6 +9,7 @@ const BASE_PAGE_PATH = path.join(
 );
 
 export async function generateBasePageIfNotExists() {
+
   try {
     await fs.access(BASE_PAGE_PATH);
     console.log("📦 BasePage already exists");
@@ -18,53 +19,79 @@ export async function generateBasePageIfNotExists() {
   }
 
   const content = `import { Page, expect } from "@playwright/test";
+import { resolveLocator } from "../../ai/execution/locator/locator-resolver";
 
 export class BasePage {
+
   protected page: Page;
 
   constructor(page: Page) {
     this.page = page;
   }
 
-  // 🌍 Navigate
   async goto(url: string) {
     await this.page.goto(url);
   }
 
-  // 🖱 Click
-  async click(selector: string) {
+  private async getSelector(element: any) {
+
+    if (!element) {
+      throw new Error("❌ Element config missing");
+    }
+
+    const selector = await resolveLocator(
+      this.page,
+      element
+    );
+
+    if (!selector) {
+      throw new Error(
+        "❌ Unable to resolve selector for element: " +
+        JSON.stringify(element)
+      );
+    }
+
+    return selector;
+  }
+
+  async click(element: any) {
+
+    const selector = await this.getSelector(element);
+
     await this.page.locator(selector).click();
   }
 
-  // ✏️ Fill
-  async fill(selector: string, value: string) {
+  async fill(element: any, value: string) {
+
+    const selector = await this.getSelector(element);
+
     await this.page.locator(selector).fill(value);
   }
 
-  // 👀 Expect visible
-  async expectVisibleSelector(selector: string) {
-    await expect(this.page.locator(selector)).toBeVisible();
+  async expectVisibleSelector(element: any) {
+
+    const selector = await this.getSelector(element);
+
+    await expect(
+      this.page.locator(selector)
+    ).toBeVisible();
   }
 
-  // 📝 Expect text
-  async expectText(selector: string, text: string) {
-    await expect(this.page.locator(selector)).toContainText(text);
+  async expectText(element: any, text: string) {
+
+    const selector = await this.getSelector(element);
+
+    await expect(
+      this.page.locator(selector)
+    ).toContainText(text);
   }
 
-  // ⏳ Wait for selector
-  async waitForVisible(selector: string) {
-    await this.page.locator(selector).waitFor({ state: "visible" });
-  }
-
-  // 🔍 Get text
-  async getText(selector: string) {
-    return await this.page.locator(selector).innerText();
-  }
 }
 `;
 
   await fs.mkdir(path.dirname(BASE_PAGE_PATH), { recursive: true });
+
   await fs.writeFile(BASE_PAGE_PATH, content);
 
-  console.log("✅ BasePage generated at:", BASE_PAGE_PATH);
+  console.log("✅ BasePage generated:", BASE_PAGE_PATH);
 }

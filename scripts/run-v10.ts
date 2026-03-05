@@ -2,8 +2,12 @@ import fs from "fs";
 import path from "path";
 import yaml from "yaml";
 import readline from "readline";
+import { exec } from "child_process";
+import util from "util";
 
 import { runV10 } from "../ai/orchestrator/orchestrator-v10";
+
+const execAsync = util.promisify(exec);
 
 /**
  * =====================================
@@ -57,9 +61,58 @@ async function chooseScenario(paths: string[]): Promise<string> {
   });
 
   const selected = paths[index - 1];
-  if (!selected) throw new Error("Invalid selection");
+
+  if (!selected) throw new Error("❌ Invalid selection");
 
   return selected;
+}
+
+/**
+ * =====================================
+ * EXTRACT ELEMENTS FROM STEPS
+ * =====================================
+ */
+function extractElements(steps: any[]) {
+  const uniqueTargets = [
+    ...new Set(
+      steps
+        .filter((s) => s.target)
+        .map((s) => s.target)
+    ),
+  ];
+
+  return uniqueTargets.map((name) => ({
+    name,
+    selector: "AUTO_DETECT",
+  }));
+}
+
+/**
+ * =====================================
+ * RUN GENERATED TESTS
+ * =====================================
+ */
+async function runGeneratedTests() {
+  console.log("\n🚀 Running generated tests...\n");
+
+  try {
+    const { stdout, stderr } = await execAsync(
+      "npx playwright test tests/ai_generated/ui"
+    );
+
+    console.log(stdout);
+
+    if (stderr) {
+      console.log(stderr);
+    }
+
+    console.log("✅ Test execution finished");
+  } catch (error: any) {
+    console.log("❌ Test execution failed");
+
+    if (error.stdout) console.log(error.stdout);
+    if (error.stderr) console.log(error.stderr);
+  }
 }
 
 /**
@@ -97,15 +150,24 @@ async function main() {
   const scenario = yaml.parse(file);
 
   const steps = scenario.steps || [];
+
+  /**
+   * Extract URL
+   */
   const url =
-    steps.find((s: any) => s.action === "goto")?.target ||
+    steps.find((s: any) => s.type === "goto")?.url ||
     "https://www.saucedemo.com";
 
+  /**
+   * Extract elements
+   */
+  const elements = extractElements(steps);
+
   const uiState = {
-    elements: steps.map((s: any) => ({
-      selector: s.target || "body",
-    })),
+    elements,
   };
+
+  console.log("📦 Elements detected:", elements.length);
 
   try {
     const result = await runV10(
@@ -116,6 +178,12 @@ async function main() {
     );
 
     console.log("\n🎯 Generation completed:", result);
+
+    /**
+     * RUN TEST AFTER GENERATION
+     */
+    await runGeneratedTests();
+
   } catch (err) {
     console.error("❌ Agent crashed:", err);
   }

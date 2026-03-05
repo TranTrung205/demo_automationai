@@ -2,69 +2,88 @@ import fs from "fs/promises";
 import path from "path";
 
 function normalizeName(name: string): string {
-  return name.replace(/\s+/g, "").replace(/[^a-zA-Z0-9]/g, "");
+  return String(name)
+    .replace(".yaml", "")
+    .replace(/\s+/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "");
 }
 
 export async function generateTest(
-  steps: any[],
-  testName: string
+  testName: any,
+  pageName: any,
+  steps: any[]
 ) {
 
-  if (!Array.isArray(steps)) {
-    throw new Error("Steps must be an array");
+  if (!steps || !Array.isArray(steps)) {
+    throw new Error("❌ Steps is undefined or not an array");
   }
 
-  const cleanName = normalizeName(testName);
-  const className = `${cleanName}Page`;
+  const cleanTestName = normalizeName(testName);
+  const cleanPageName = normalizeName(pageName?.name || pageName);
 
-  const filePath = path.join(
+  const folderPath = path.join(
     process.cwd(),
     "tests",
     "ai_generated",
-    "ui",
-    `${cleanName}.spec.ts`
+    "ui"
   );
 
-  const actions = steps.map((step) => {
+  await fs.mkdir(folderPath, { recursive: true });
 
-    // ✅ GOTO
-    if (step.action === "goto") {
-      return `  await pageObject.goto("${step.target}");`;
-    }
+  const filePath = path.join(
+    folderPath,
+    `${cleanTestName}.spec.ts`
+  );
 
-    const key = normalizeName(step.target || step.id || "");
+  const stepCode = steps
+    .map((step) => {
 
-    // ✅ VERIFY
-    if (step.action === "verify") {
-      return `  await pageObject.expectVisible("${key}");`;
-    }
+      if (!step) return "";
 
-    // ✅ FILL
-    if (step.value) {
-      return `  await pageObject.performAction("${key}", "${step.value}");`;
-    }
+      // goto
+      if (step.type === "goto") {
+        return `await pageObject.goto("${step.url}");`;
+      }
 
-    // ✅ CLICK
-    return `  await pageObject.performAction("${key}");`;
+      // action
+      if (step.type === "action") {
 
-  }).join("\n");
+        const target = step.target || "unknown";
 
-  const content = `import { test } from "@playwright/test";
-import { ${className} } from "../../../pages/ai_generated/pom/${className}";
+        if (step.value !== undefined) {
+          return `await pageObject.performAction("${target}", "${step.value}");`;
+        }
 
-test("${testName}", async ({ page }) => {
+        return `await pageObject.performAction("${target}");`;
+      }
 
-  const pageObject = new ${className}(page);
+      // assert
+      if (step.type === "assert") {
 
-${actions}
+        const target = step.target || "unknown";
+
+        return `await pageObject.expectVisible("${target}");`;
+      }
+
+      return "";
+
+    })
+    .filter(Boolean)
+    .join("\n  ");
+
+  const code = `import { test } from "@playwright/test";
+import { ${cleanPageName}Page } from "../../../pages/ai_generated/pom/${cleanPageName}Page";
+
+test("${cleanTestName}", async ({ page }) => {
+
+  const pageObject = new ${cleanPageName}Page(page);
+
+  ${stepCode}
 
 });
 `;
 
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, content);
+  await fs.writeFile(filePath, code);
 
-  console.log("✅ Test generated at:", filePath);
-
-  return { filePath };
+  console.log("🧪 Test generated:", filePath);
 }

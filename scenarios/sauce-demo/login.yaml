@@ -1,27 +1,28 @@
-name: SauceDemo Login
+name: SauceDemoLogin
 description: Login with standard user and verify inventory page loads
+
+page: SauceDemoLogin
 
 steps:
 
   - id: open_site
-    action: goto
-    target: https://www.saucedemo.com
+    type: goto
+    url: https://www.saucedemo.com
 
   - id: fill_username
-    action: fill
-    target: "#user-name"
+    type: action
+    target: username
     value: standard_user
 
   - id: fill_password
-    action: fill
-    target: "#password"
+    type: action
+    target: password
     value: secret_sauce
 
   - id: click_login
-    action: click
-    target: "#login-button"
-    waitForNavigation: true
+    type: action
+    target: loginButton
 
   - id: verify_inventory
-    action: assertVisible
-    target: ".inventory_list"
+    type: assert
+    target: inventoryList

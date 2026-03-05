@@ -1,62 +1,52 @@
 import fs from "fs/promises";
 import path from "path";
 
-function normalizeName(name: string): string {
-  return name.replace(/\s+/g, "").replace(/[^a-zA-Z0-9]/g, "");
-}
-
-function isValidSelector(value: string): boolean {
-  if (!value) return false;
-
-  // ❌ ignore URLs
-  if (value.startsWith("http")) return false;
-
-  return true;
-}
-
 export async function generateUI(
-  uiState: any,
-  testName: string
+  pageName: string,
+  elements: any[]
 ) {
-  const cleanName = normalizeName(testName);
-  const uiName = `${cleanName}UI`;
 
-  const elements: Record<string, string> = {};
+  const cleanName = String(pageName)
+    .replace(/\s+/g, "")
+    .replace(".yaml", "");
 
-  uiState.elements.forEach((el: any, index: number) => {
-
-    const selector = el.selector || el.target || "";
-
-    // ✅ SKIP URL
-    if (!isValidSelector(selector)) return;
-
-    const rawKey =
-      el.id ||
-      el.name ||
-      el.text?.replace(/\s+/g, "") ||
-      `element${index}`;
-
-    const key = normalizeName(rawKey);
-
-    elements[key] = selector;
-  });
-
-  const filePath = path.join(
+  const folder = path.join(
     process.cwd(),
     "pages",
     "ai_generated",
-    "ui",
+    "ui"
+  );
+
+  await fs.mkdir(folder, { recursive: true });
+
+  const filePath = path.join(
+    folder,
     `${cleanName}.ui.ts`
   );
 
-  const content = `export const ${uiName} = {
+  const elementMap: any = {};
+
+  for (const el of elements) {
+
+    const name =
+      el.name ||
+      el.target ||
+      "element";
+
+    elementMap[name] = {
+      primary: "AUTO_DETECT",
+      description: name
+    };
+  }
+
+  const code = `
+export const ${cleanName}UI = {
   pageName: "${cleanName}",
-  elements: ${JSON.stringify(elements, null, 2)}
+  elements: ${JSON.stringify(elementMap, null, 2)}
 };
 `;
 
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, content);
+  await fs.writeFile(filePath, code);
 
-  console.log("✅ UI abstraction generated at:", filePath);
+  console.log("🎨 UI generated:", filePath);
 }
